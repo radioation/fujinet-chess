@@ -1,13 +1,13 @@
-PRODUCT = hello
-PLATFORMS += adam
-PLATFORMS += adam_cpm
-PLATFORMS += apple2
+PRODUCT = chess
+#PLATFORMS += adam
+#PLATFORMS += adam_cpm
+#PLATFORMS += apple2
 PLATFORMS += atari
 PLATFORMS += c64
-PLATFORMS += coco
-PLATFORMS += msdos
-PLATFORMS += msxrom
-
+#PLATFORMS += coco
+#PLATFORMS += msdos
+#PLATFORMS += msxrom
+#
 # You can run 'make <platform>' to build for a specific platform,
 # or 'make <platform>/<target>' for a platform-specific target.
 # Example shortcuts:
@@ -52,3 +52,7 @@ include mekkogx/toplevel-rules.mk
 #   coco/r2r:: coco/custom-step2
 # or
 #   apple2/disk: apple2/custom-step1 apple2/custom-step2
+#
+#
+#
+LDFLAGS_EXTRA_ATARI = -C src/atari/atari.cfg --mapfile ./fnrm_atari.map -Ln ./fnrm_atari.lbl --debug-info  -Wl -D__SYSTEM_CHECK__=1
