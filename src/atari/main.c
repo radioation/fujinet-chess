@@ -40,9 +40,12 @@ typedef enum {
 #define PLAYER_ONE  1
 #define PLAYER_TWO  2
 
+#define BOARD_NUM_COLS 8
 #define BOARD_START 16
 #define BOARD_STRIDE 32
 #define BOARD_COL_SPACING 2
+
+#define INPUT_WAIT_COUNT 10
 
 #define BUTTON_UP 14
 #define BUTTON_DOWN 13
@@ -95,7 +98,25 @@ extern uint8_t pmg_memory[380];
 extern uint8_t font[];
 extern uint8_t pmg_data[1024];
 //
-//static uint8_t board_data[BOARD_SIZE];
+// static uint8_t board_data[BOARD_NUM_COLS];
+CHESS_PIECE board[BOARD_NUM_COLS][BOARD_NUM_COLS]; // X, Y
+int piecesTileIndex = -1;
+const int8_t boardStartCol = 8;
+const int8_t boardStartRow = 2;
+const int8_t boardStep = 3;
+
+void clear_board() {
+    uint8_t x, y;
+    for( x=0; x < BOARD_NUM_COLS; x++ ) {
+        for(  y=0; y < BOARD_NUM_COLS; y++ ){
+            board[x][y].type = EMPTY;
+            board[x][y].player = NO_PLAYER;
+        }
+    }
+}
+
+
+
 
 static void setup_charset() {
   uint16_t i = 0;
@@ -231,69 +252,75 @@ bool cursor_move( uint8_t stick ) {
     return didMove;
 }
 
-/*
-void cursor_update_from_pos( CURSOR *cursor, s8 col, s8 row, s8 sel_col, s8 sel_row ) {
-    cursor->col = col;
-    cursor->txt_x = cursor->col * cursorStep + cursorColStart;
-    cursor->row = row;
-    cursor->txt_y = cursor->row * cursorStep + cursorRowStart;
 
-    cursor->sel_col = sel_col;
-    cursor->sel_txt_x = cursor->sel_col * cursorStep + cursorColStart;
-    cursor->sel_row = sel_row;
-    cursor->sel_txt_y = cursor->sel_row * cursorStep + cursorRowStart;
-    if( cursor->sel_col >= 0 ) {
-        SPR_setVisibility( cursor->selected_spr, VISIBLE );
+void cursor_update_from_pos( int8_t  col, int8_t  row, int8_t  sel_col, int8_t  sel_row ) {
+    chess_cursor.col = col;
+    chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+    chess_cursor.row = row;
+    chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+
+    chess_cursor.sel_col = sel_col;
+    chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
+    chess_cursor.sel_row = sel_row;
+    chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
+    if( chess_cursor.sel_col >= 0 ) {
+        //SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
     } else {
-        SPR_setVisibility( cursor->selected_spr, HIDDEN );
+       // SPR_setVisibility( chess_cursor.selected_spr, HIDDEN );
     }
 }
 
-void cursor_clear_selected( CURSOR* cursor ) {
-    char message[40];
-    cursor->sel_col = -1;
-    cursor->sel_row = -1;
-    cursor->sel_txt_x = -32;
-    cursor->sel_txt_y = -32;
-    SPR_setVisibility( cursor->selected_spr, HIDDEN );
+void cursor_clear_selected( ) {
+//    char message[40];
+    chess_cursor.sel_col = -1;
+    chess_cursor.sel_row = -1;
+    chess_cursor.sel_txt_x = -1;
+    chess_cursor.sel_txt_y = -1;
+    //SPR_setVisibility( chess_cursor.selected_spr, HIDDEN );
     //char message[40];
-    strclr(message);
-    sprintf( message, "X: %d y: %d sx: %d sy %d    ", cursor->col, cursor->row, cursor->sel_col, cursor->sel_row);
+    //strclr(message);
+    //sprintf( message, "X: %d y: %d sx: %d sy %d    ", chess_cursor.col, chess_cursor.row, chess_cursor.sel_col, chess_cursor.sel_row);
 }
 
 
 
-bool cursor_action( CURSOR* cursor, CHESS_PIECE brd[8][8], u8 player ) {
-    if( cursor->sel_col < 0 ) {
+bool cursor_action( CHESS_PIECE brd[8][8], uint8_t player ) {
+    if( chess_cursor.sel_col < 0 ) {
         // no piece selected yet, check if player owns the current piece.
-        if( brd[(u8)cursor->col][(u8)cursor->row].player == player ) { 
-            cursor->sel_col = cursor->col;
-            cursor->sel_row = cursor->row;
-            cursor->sel_txt_x = cursor->sel_col * cursorStep + cursorColStart;
-            cursor->sel_txt_y = cursor->sel_row * cursorStep + cursorRowStart;
-            SPR_setVisibility( cursor->selected_spr, VISIBLE );
+        if( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player == player ) { 
+            chess_cursor.sel_col = chess_cursor.col;
+            chess_cursor.sel_row = chess_cursor.row;
+            chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
+            chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
+            //SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
         }
     } else {
         //char message[40];
         //strclr(message);
-        //sprintf( message, "X: %d y: %d sx: %d sy %d    ", cursor->col, cursor->row, cursor->sel_col, cursor->sel_row);
+        //sprintf( message, "X: %d y: %d sx: %d sy %d    ", chess_cursor.col, chess_cursor.row, chess_cursor.sel_col, chess_cursor.sel_row);
         //VDP_drawText( message, 0, 1 );
         // return true if destination is clear or a different player, BUT DON"T UPDATE BOARD 
-        return ( brd[(u8)cursor->col][(u8)cursor->row].player != player );
+        return ( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player != player );
 
     }
     return false;
 }
 
 
-*/
 
 static void handle_my_turn() {
   // read joystick to move cursor
   if( inputWait == 0 ) {
     uint8_t stick = OS.stick0;
     if( cursor_move( stick ) == true ) {
+                    inputWait = INPUT_WAIT_COUNT;
     }
+      if( !OS.strig0 ) {
+        // need 
+        bool trySend =  cursor_action( board, current_player );
+        if( trySend ) {
+        }
+      }
     /* SEGA!
                 u16 stick  = JOY_readJoypad( JOY_1 );
                 // update local position
