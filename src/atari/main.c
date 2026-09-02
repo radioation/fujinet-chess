@@ -33,8 +33,8 @@ typedef enum {
 #define  QUEEN  2
 #define  ROOK  3
 #define  BISHOP  4
-#define  KNIGHT  15
-#define  PAWN  18
+#define  KNIGHT  5
+#define  PAWN   6
 
 #define NO_PLAYER  0
 #define PLAYER_ONE  1
@@ -116,6 +116,57 @@ void clear_board() {
 }
 
 
+void setup_pieces() {
+    uint8_t i;
+    // clear the board
+    memset(board, 0, sizeof(CHESS_PIECE) * 8 * 8); // Set all to empty
+
+    // set  pieces up
+    board[0][7].type = ROOK;
+    board[0][7].player = PLAYER_ONE;
+    board[1][7].type = KNIGHT;
+    board[1][7].player =  PLAYER_ONE; 
+    board[2][7].type = BISHOP;
+    board[2][7].player =  PLAYER_ONE; 
+    board[3][7].type = QUEEN;
+    board[3][7].player =  PLAYER_ONE;  
+    board[4][7].type = KING;
+    board[4][7].player =  PLAYER_ONE;
+    board[5][7].type = BISHOP;
+    board[5][7].player =  PLAYER_ONE;
+    board[6][7].type = KNIGHT;
+    board[6][7].player =  PLAYER_ONE;
+    board[7][7].type = ROOK;
+    board[7][7].player =  PLAYER_ONE;
+
+
+    for ( i = 0; i < 8; i++) {
+      board[i][6].type = PAWN;
+      board[i][6].player = PLAYER_ONE;
+      board[i][1].type = PAWN;
+      board[i][1].player = PLAYER_TWO;
+    }
+
+
+    board[0][0].type = ROOK;
+    board[0][0].player = PLAYER_TWO;
+    board[1][0].type = KNIGHT;
+    board[1][0].player =  PLAYER_TWO; 
+    board[2][0].type = BISHOP;
+    board[2][0].player =  PLAYER_TWO; 
+    board[3][0].type = QUEEN;
+    board[3][0].player =  PLAYER_TWO;  
+    board[4][0].type = KING;
+    board[4][0].player =  PLAYER_TWO;
+    board[5][0].type = BISHOP;
+    board[5][0].player =  PLAYER_TWO;
+    board[6][0].type = KNIGHT;
+    board[6][0].player =  PLAYER_TWO;
+    board[7][0].type = ROOK;
+    board[7][0].player =  PLAYER_TWO;
+}
+
+
 
 
 static void setup_charset() {
@@ -136,7 +187,7 @@ static void setup_charset() {
   screen_memory [ 32 ] =  11;
   screen_memory [ 48 ] =  0;  
   screen_memory [ 64 ] =  12;
- 
+
   screen_memory [ 240 ] =  10+128; // white is + 128
   screen_memory [ 256 ] =  11+128;
   screen_memory [ 208 ] =  0;  
@@ -146,7 +197,7 @@ static void setup_charset() {
   // fake cursor
   screen_memory [ 112 + 2 ] =  28 + 64;  //  cursor color is +64
   screen_memory [ 128 + 2] =  29 + 64;
- 
+
   //for( i=0; i < 64; ++i ) { 
   //  screen_memory[20+i] = i;
   //}
@@ -199,111 +250,111 @@ static void setup_pm_graphics() {
 
 
 void cursor_init( ) {
-    chess_cursor.col = 4;  // board position
-    chess_cursor.row = 4;
-    chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
-    chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
-    //cursor.sprite =  sprite;
+  chess_cursor.col = 4;  // board position
+  chess_cursor.row = 4;
+  chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+  chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+  //cursor.sprite =  sprite;
 
-    chess_cursor.sel_col = -1;  // not on board
-    chess_cursor.sel_row = -1;
-    chess_cursor.sel_txt_x = -1;
-    chess_cursor.sel_txt_y = -1;
+  chess_cursor.sel_col = -1;  // not on board
+  chess_cursor.sel_row = -1;
+  chess_cursor.sel_txt_x = -1;
+  chess_cursor.sel_txt_y = -1;
 
-    //cursor->selected_spr = selected_sprite;
-    //SPR_setAnim( cursor->selected_spr, 1 );
-   // SPR_setVisibility( cursor->selected_spr, HIDDEN );
+  //cursor->selected_spr = selected_sprite;
+  //SPR_setAnim( cursor->selected_spr, 1 );
+  // SPR_setVisibility( cursor->selected_spr, HIDDEN );
 }
 
 bool cursor_move( uint8_t stick ) {
-    bool didMove = false;
-    if( stick & BUTTON_LEFT ) {
-        chess_cursor.col--;
-        if( chess_cursor.col < 0 ) {
-            chess_cursor.col = 7;
-        }
-        chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
-        didMove = true;
-    } 
-    if( stick & BUTTON_RIGHT ) {
-        chess_cursor.col++;
-        if( chess_cursor.col > 7 ) {
-            chess_cursor.col = 0;
-        }
-        chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
-        didMove = true;
-    } 
-    if( stick & BUTTON_UP ) {
-        chess_cursor.row--;
-        if( chess_cursor.row < 0 ) {
-            chess_cursor.row = 7;
-        }
-        chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
-        didMove = true;
+  bool didMove = false;
+  if( stick & BUTTON_LEFT ) {
+    chess_cursor.col--;
+    if( chess_cursor.col < 0 ) {
+      chess_cursor.col = 7;
     }
-    if( stick & BUTTON_DOWN ) {
-        chess_cursor.row++;
-        if( chess_cursor.row > 7 ) {
-            chess_cursor.row = 0;
-        }
-        chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
-        didMove = true;
+    chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+    didMove = true;
+  } 
+  if( stick & BUTTON_RIGHT ) {
+    chess_cursor.col++;
+    if( chess_cursor.col > 7 ) {
+      chess_cursor.col = 0;
     }
-    return didMove;
+    chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+    didMove = true;
+  } 
+  if( stick & BUTTON_UP ) {
+    chess_cursor.row--;
+    if( chess_cursor.row < 0 ) {
+      chess_cursor.row = 7;
+    }
+    chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+    didMove = true;
+  }
+  if( stick & BUTTON_DOWN ) {
+    chess_cursor.row++;
+    if( chess_cursor.row > 7 ) {
+      chess_cursor.row = 0;
+    }
+    chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+    didMove = true;
+  }
+  return didMove;
 }
 
 
 void cursor_update_from_pos( int8_t  col, int8_t  row, int8_t  sel_col, int8_t  sel_row ) {
-    chess_cursor.col = col;
-    chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
-    chess_cursor.row = row;
-    chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+  chess_cursor.col = col;
+  chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+  chess_cursor.row = row;
+  chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
 
-    chess_cursor.sel_col = sel_col;
-    chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
-    chess_cursor.sel_row = sel_row;
-    chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
-    if( chess_cursor.sel_col >= 0 ) {
-        //SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
-    } else {
-       // SPR_setVisibility( chess_cursor.selected_spr, HIDDEN );
-    }
+  chess_cursor.sel_col = sel_col;
+  chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
+  chess_cursor.sel_row = sel_row;
+  chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
+  if( chess_cursor.sel_col >= 0 ) {
+    //SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
+  } else {
+    // SPR_setVisibility( chess_cursor.selected_spr, HIDDEN );
+  }
 }
 
 void cursor_clear_selected( ) {
-//    char message[40];
-    chess_cursor.sel_col = -1;
-    chess_cursor.sel_row = -1;
-    chess_cursor.sel_txt_x = -1;
-    chess_cursor.sel_txt_y = -1;
-    //SPR_setVisibility( chess_cursor.selected_spr, HIDDEN );
-    //char message[40];
-    //strclr(message);
-    //sprintf( message, "X: %d y: %d sx: %d sy %d    ", chess_cursor.col, chess_cursor.row, chess_cursor.sel_col, chess_cursor.sel_row);
+  //    char message[40];
+  chess_cursor.sel_col = -1;
+  chess_cursor.sel_row = -1;
+  chess_cursor.sel_txt_x = -1;
+  chess_cursor.sel_txt_y = -1;
+  //SPR_setVisibility( chess_cursor.selected_spr, HIDDEN );
+  //char message[40];
+  //strclr(message);
+  //sprintf( message, "X: %d y: %d sx: %d sy %d    ", chess_cursor.col, chess_cursor.row, chess_cursor.sel_col, chess_cursor.sel_row);
 }
 
 
 
 bool cursor_action( CHESS_PIECE brd[8][8], uint8_t player ) {
-    if( chess_cursor.sel_col < 0 ) {
-        // no piece selected yet, check if player owns the current piece.
-        if( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player == player ) { 
-            chess_cursor.sel_col = chess_cursor.col;
-            chess_cursor.sel_row = chess_cursor.row;
-            chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
-            chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
-            //SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
-        }
-    } else {
-        //char message[40];
-        //strclr(message);
-        //sprintf( message, "X: %d y: %d sx: %d sy %d    ", chess_cursor.col, chess_cursor.row, chess_cursor.sel_col, chess_cursor.sel_row);
-        //VDP_drawText( message, 0, 1 );
-        // return true if destination is clear or a different player, BUT DON"T UPDATE BOARD 
-        return ( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player != player );
-
+  if( chess_cursor.sel_col < 0 ) {
+    // no piece selected yet, check if player owns the current piece.
+    if( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player == player ) { 
+      chess_cursor.sel_col = chess_cursor.col;
+      chess_cursor.sel_row = chess_cursor.row;
+      chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
+      chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
+      //SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
     }
-    return false;
+  } else {
+    //char message[40];
+    //strclr(message);
+    //sprintf( message, "X: %d y: %d sx: %d sy %d    ", chess_cursor.col, chess_cursor.row, chess_cursor.sel_col, chess_cursor.sel_row);
+    //VDP_drawText( message, 0, 1 );
+    // return true if destination is clear or a different player, BUT DON"T UPDATE BOARD 
+    return ( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player != player );
+
+  }
+  return false;
 }
 
 
@@ -313,44 +364,44 @@ static void handle_my_turn() {
   if( inputWait == 0 ) {
     uint8_t stick = OS.stick0;
     if( cursor_move( stick ) == true ) {
-                    inputWait = INPUT_WAIT_COUNT;
+      inputWait = INPUT_WAIT_COUNT;
     }
-      if( !OS.strig0 ) {
-        // need 
-        bool trySend =  cursor_action( board, current_player );
-        if( trySend ) {
-        }
+    if( !OS.strig0 ) {
+      // need 
+      bool trySend =  cursor_action( board, current_player );
+      if( trySend ) {
       }
+    }
     /* SEGA!
-                u16 stick  = JOY_readJoypad( JOY_1 );
-                // update local position
-                if( cursor_move( &cursor, stick ) == true ) {
-                    XGM_startPlayPCM(SND_MOVE,1,SOUND_PCM_CH2);
-                    inputWait = INPUT_WAIT_COUNT;
-                }
-                // if A, 
-                if( stick & BUTTON_A ) {
-                    bool trySend =  cursor_action( &cursor, board, currentPlayer );
-                    inputWait = INPUT_WAIT_COUNT;
-                    if( trySend ) {
-                        // send possible move
-                        if( send_move( &cursor, 1 ) ) {
-                           currentPlayer = currentPlayer == PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE; 
-                        }
-                    }
-                } else if( stick & BUTTON_C ) {
-                    cursor_clear_selected( &cursor );
-                    inputWait = INPUT_WAIT_COUNT;
-                } 
-     */
+       u16 stick  = JOY_readJoypad( JOY_1 );
+    // update local position
+    if( cursor_move( &cursor, stick ) == true ) {
+    XGM_startPlayPCM(SND_MOVE,1,SOUND_PCM_CH2);
+    inputWait = INPUT_WAIT_COUNT;
+    }
+    // if A, 
+    if( stick & BUTTON_A ) {
+    bool trySend =  cursor_action( &cursor, board, currentPlayer );
+    inputWait = INPUT_WAIT_COUNT;
+    if( trySend ) {
+    // send possible move
+    if( send_move( &cursor, 1 ) ) {
+    currentPlayer = currentPlayer == PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE; 
+    }
+    }
+    } else if( stick & BUTTON_C ) {
+    cursor_clear_selected( &cursor );
+    inputWait = INPUT_WAIT_COUNT;
+    } 
+    */
 
   } else {
-      if ( inputWait > 0 ) {
-          --inputWait;
-      }
+    if ( inputWait > 0 ) {
+      --inputWait;
+    }
   }
 
- 
+
 
 }
 
