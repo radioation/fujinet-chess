@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <peekpoke.h>
+#include <stdbool.h>
 
 #include <fujinet-network.h>
 
@@ -43,7 +44,10 @@ typedef enum {
 #define BOARD_STRIDE 32
 #define BOARD_COL_SPACING 2
 
-
+#define BUTTON_UP 14
+#define BUTTON_DOWN 13
+#define BUTTON_LEFT 11
+#define BUTTON_RIGHT 7
 // Structure to represent a chess piece
 typedef struct {
     uint8_t type;   // Type of the piece
@@ -58,9 +62,30 @@ typedef struct {
     uint8_t is_biroqu[2]; // is a bishop, rook, or queen
 } CHECKERS;
 
-uint8_t current_player =NO_PLAYER;
-uint8_t who_am_i = NO_PLAYER;
-uint8_t inputWait = 0;
+
+typedef struct 
+{
+      // Sprite *sprite;
+    int8_t col;     // board col
+    int8_t row;     // board row
+    int8_t txt_x;   // sega used screen position because sprite. using text here.
+    int8_t txt_y;
+    int8_t sel_col; // selected board column
+    int8_t sel_row; // selected board row
+    int16_t sel_txt_x;
+    int16_t sel_txt_y;
+    //Sprite *selected_spr;  
+} CURSOR;
+
+static const int8_t cursorStep = 2;
+static const int8_t cursorColStart = 64; 
+static const int8_t cursorRowStart = 16;
+
+CURSOR chess_cursor;
+
+static uint8_t current_player =NO_PLAYER;
+static uint8_t who_am_i = NO_PLAYER;
+static uint8_t inputWait = 0;
 
 void init_dlist(void);
 
@@ -104,7 +129,7 @@ static void setup_charset() {
   //for( i=0; i < 64; ++i ) { 
   //  screen_memory[20+i] = i;
   //}
-  sprintf(message_memory, "fujinet"); 
+  sprintf((char *)message_memory, "fujinet"); 
 }
 
 static void setup_pm_graphics() {
@@ -152,69 +177,71 @@ static void setup_pm_graphics() {
 
 
 
-void cursor_init( CURSOR *cursor, Sprite *sprite, Sprite *selected_sprite ) {
-    cursor->col = 4;  // board position
-    cursor->row = 4;
-    cursor->pos_x = cursor->col * cursorStep + cursorColStart;
-    cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
-    cursor->sprite =  sprite;
+void cursor_init( ) {
+    chess_cursor.col = 4;  // board position
+    chess_cursor.row = 4;
+    chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+    chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+    //cursor.sprite =  sprite;
 
-    cursor->sel_col = -1;  // not on board
-    cursor->sel_row = -1;
-    cursor->sel_pos_x = -32;
-    cursor->sel_pos_y = -32;
-    cursor->selected_spr = selected_sprite;
-    SPR_setAnim( cursor->selected_spr, 1 );
-    SPR_setVisibility( cursor->selected_spr, HIDDEN );
+    chess_cursor.sel_col = -1;  // not on board
+    chess_cursor.sel_row = -1;
+    chess_cursor.sel_txt_x = -1;
+    chess_cursor.sel_txt_y = -1;
+
+    //cursor->selected_spr = selected_sprite;
+    //SPR_setAnim( cursor->selected_spr, 1 );
+   // SPR_setVisibility( cursor->selected_spr, HIDDEN );
 }
 
-bool cursor_move( CURSOR *cursor, u16 joypad ) {
-    bool didMove = FALSE;
-    if( joypad & BUTTON_LEFT ) {
-        cursor->col--;
-        if( cursor->col < 0 ) {
-            cursor->col = 7;
+bool cursor_move( uint8_t stick ) {
+    bool didMove = false;
+    if( stick & BUTTON_LEFT ) {
+        chess_cursor.col--;
+        if( chess_cursor.col < 0 ) {
+            chess_cursor.col = 7;
         }
-        cursor->pos_x = cursor->col * cursorStep + cursorColStart;
-        didMove = TRUE;
+        chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+        didMove = true;
     } 
-    if( joypad & BUTTON_RIGHT ) {
-        cursor->col++;
-        if( cursor->col > 7 ) {
-            cursor->col = 0;
+    if( stick & BUTTON_RIGHT ) {
+        chess_cursor.col++;
+        if( chess_cursor.col > 7 ) {
+            chess_cursor.col = 0;
         }
-        cursor->pos_x = cursor->col * cursorStep + cursorColStart;
-        didMove = TRUE;
+        chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
+        didMove = true;
     } 
-    if( joypad & BUTTON_UP ) {
-        cursor->row--;
-        if( cursor->row < 0 ) {
-            cursor->row = 7;
+    if( stick & BUTTON_UP ) {
+        chess_cursor.row--;
+        if( chess_cursor.row < 0 ) {
+            chess_cursor.row = 7;
         }
-        cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
-        didMove = TRUE;
+        chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+        didMove = true;
     }
-    if( joypad & BUTTON_DOWN ) {
-        cursor->row++;
-        if( cursor->row > 7 ) {
-            cursor->row = 0;
+    if( stick & BUTTON_DOWN ) {
+        chess_cursor.row++;
+        if( chess_cursor.row > 7 ) {
+            chess_cursor.row = 0;
         }
-        cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
-        didMove = TRUE;
+        chess_cursor.txt_y = chess_cursor.row * cursorStep + cursorRowStart;
+        didMove = true;
     }
     return didMove;
 }
 
+/*
 void cursor_update_from_pos( CURSOR *cursor, s8 col, s8 row, s8 sel_col, s8 sel_row ) {
     cursor->col = col;
-    cursor->pos_x = cursor->col * cursorStep + cursorColStart;
+    cursor->txt_x = cursor->col * cursorStep + cursorColStart;
     cursor->row = row;
-    cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
+    cursor->txt_y = cursor->row * cursorStep + cursorRowStart;
 
     cursor->sel_col = sel_col;
-    cursor->sel_pos_x = cursor->sel_col * cursorStep + cursorColStart;
+    cursor->sel_txt_x = cursor->sel_col * cursorStep + cursorColStart;
     cursor->sel_row = sel_row;
-    cursor->sel_pos_y = cursor->sel_row * cursorStep + cursorRowStart;
+    cursor->sel_txt_y = cursor->sel_row * cursorStep + cursorRowStart;
     if( cursor->sel_col >= 0 ) {
         SPR_setVisibility( cursor->selected_spr, VISIBLE );
     } else {
@@ -226,8 +253,8 @@ void cursor_clear_selected( CURSOR* cursor ) {
     char message[40];
     cursor->sel_col = -1;
     cursor->sel_row = -1;
-    cursor->sel_pos_x = -32;
-    cursor->sel_pos_y = -32;
+    cursor->sel_txt_x = -32;
+    cursor->sel_txt_y = -32;
     SPR_setVisibility( cursor->selected_spr, HIDDEN );
     //char message[40];
     strclr(message);
@@ -242,8 +269,8 @@ bool cursor_action( CURSOR* cursor, CHESS_PIECE brd[8][8], u8 player ) {
         if( brd[(u8)cursor->col][(u8)cursor->row].player == player ) { 
             cursor->sel_col = cursor->col;
             cursor->sel_row = cursor->row;
-            cursor->sel_pos_x = cursor->sel_col * cursorStep + cursorColStart;
-            cursor->sel_pos_y = cursor->sel_row * cursorStep + cursorRowStart;
+            cursor->sel_txt_x = cursor->sel_col * cursorStep + cursorColStart;
+            cursor->sel_txt_y = cursor->sel_row * cursorStep + cursorRowStart;
             SPR_setVisibility( cursor->selected_spr, VISIBLE );
         }
     } else {
@@ -259,20 +286,23 @@ bool cursor_action( CURSOR* cursor, CHESS_PIECE brd[8][8], u8 player ) {
 }
 
 
-
+*/
 
 static void handle_my_turn() {
   // read joystick to move cursor
   if( inputWait == 0 ) {
+    uint8_t stick = OS.stick0;
+    if( cursor_move( stick ) == true ) {
+    }
     /* SEGA!
-                u16 joypad  = JOY_readJoypad( JOY_1 );
+                u16 stick  = JOY_readJoypad( JOY_1 );
                 // update local position
-                if( cursor_move( &cursor, joypad ) == TRUE ) {
+                if( cursor_move( &cursor, stick ) == true ) {
                     XGM_startPlayPCM(SND_MOVE,1,SOUND_PCM_CH2);
                     inputWait = INPUT_WAIT_COUNT;
                 }
                 // if A, 
-                if( joypad & BUTTON_A ) {
+                if( stick & BUTTON_A ) {
                     bool trySend =  cursor_action( &cursor, board, currentPlayer );
                     inputWait = INPUT_WAIT_COUNT;
                     if( trySend ) {
@@ -281,14 +311,14 @@ static void handle_my_turn() {
                            currentPlayer = currentPlayer == PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE; 
                         }
                     }
-                } else if( joypad & BUTTON_C ) {
+                } else if( stick & BUTTON_C ) {
                     cursor_clear_selected( &cursor );
                     inputWait = INPUT_WAIT_COUNT;
                 } 
      */
 
   } else {
-      if ( input_wait > 0 ) {
+      if ( inputWait > 0 ) {
           --inputWait;
       }
   }
@@ -318,8 +348,12 @@ int main(void)
   // screen_print_at(0, 1, "PLAYER:");
 
   //    setup_network_game();
+  cursor_init();
 
+  inputWait = 0;
+  current_player = PLAYER_ONE;
 
+  // main loop
   for (;;) {
     if (current_player == who_am_i) {
       //            handle_my_turn();
