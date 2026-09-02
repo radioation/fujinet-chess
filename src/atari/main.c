@@ -167,6 +167,136 @@ void setup_pieces() {
 }
 
 
+void draw_pieces(){
+    uint8_t row, col;
+    uint16_t pos = 16;
+    for ( row = 0; row < 8; row++) {
+        for ( col = 0; col < 8; col++) {
+
+            if( board[col][row].player > 0 ) {
+                uint8_t color_bits = 128;
+                if( board[col][row].player == PLAYER_TWO ) {
+                    color_bits = 0;
+                }
+                switch (board[col][row].type ) {
+                  case KING:
+                    screen_memory[ pos ] = 1 | color_bits;
+                    screen_memory[ pos+16 ] = 2 | color_bits;
+                    break;
+                  case QUEEN:
+                    screen_memory[ pos ] = 3 | color_bits;
+                    screen_memory[ pos+16 ] = 4 | color_bits;
+                    break;
+                  case BISHOP:
+                    screen_memory[ pos ] = 5 | color_bits;
+                    screen_memory[ pos+16 ] = 7 | color_bits;
+                    break;
+                  case KNIGHT:
+                    screen_memory[ pos ] = 8 | color_bits;
+                    screen_memory[ pos+16 ] = 9 | color_bits;
+                    break;
+                  case ROOK:
+                    screen_memory[ pos ] = 10 | color_bits;
+                    screen_memory[ pos+16 ] = 11 | color_bits;
+                    break;
+                  case PAWN:
+                    screen_memory[ pos ] = 0;
+                    screen_memory[ pos+16 ] = 12 | color_bits;
+                    break;
+                  default:
+                    break;
+                };
+                //VDP_setTileMapEx( BG_A, pieces_img.tilemap, TILE_ATTR_FULL(PAL1, TRUE, FALSE, FALSE, piecesTileIndex),
+                //        boardStartCol + col * boardStep,  // PLANE X Dest in tiles
+                //        boardStartRow + row * boardStep,  // PLANE Y Dest in tiles
+                //        board[col][row].type,  // REGION X start
+                //        yStart,  // REGION Y start
+                //        boardStep,  // Width
+                //        boardStep,  // Height
+                //        CPU);
+            } else {
+              // clear it
+
+              
+             
+               // VDP_setTileMapEx( BG_A, pieces_img.tilemap, TILE_ATTR_FULL(PAL1, TRUE, FALSE, FALSE, piecesTileIndex),
+                //        boardStartCol + col * boardStep,  // PLANE X Dest in tiles
+                 //       boardStartRow + row * boardStep,  // PLANE Y Dest in tiles
+                  //      0,  // REGION X start
+                   //     0,  // REGION Y start
+                    //    boardStep,  // Width
+                     //   boardStep,  // Height
+                      //  CPU);
+            }
+            pos +=2;
+        }
+            pos +=16;
+    }
+}
+
+/*
+void clear_space( s8 startCol, s8 startRow ) {
+    VDP_setTileMapEx( BG_A, pieces_img.tilemap, TILE_ATTR_FULL(PAL1, TRUE, FALSE, FALSE, piecesTileIndex),
+            boardStartCol + startCol * boardStep,  // PLANE X Dest in tiles
+            boardStartRow + startRow * boardStep,  // PLANE Y Dest in tiles
+            EMPTY,  // REGION X start
+            0,  // REGION Y start
+            boardStep,  // Width
+            boardStep,  // Height
+            CPU);
+
+}
+*/
+/*
+void move_piece( s8 startCol, s8 startRow, s8 endCol, s8 endRow, s8 promotype ){
+    //if( do_move( startCol, startRow, endCol, endRow ) ) {
+    PLAYER p = board[startCol][startRow].player;
+    PIECE_TYPE cp = board[startCol][startRow].type;
+    board[endCol][endRow] = board[startCol][startRow];
+    board[startCol][startRow] = (CHESS_PIECE){EMPTY, NO_PLAYER};
+
+    // check for special cases
+    //
+    //   ' castles to check
+    //   ' white
+    //   ' e1g1 -  4,7,6,7
+    //   ' e1c1 -  4,7,2,7
+    //   ' black
+    //   ' e8g8 -  4,0,6,0
+    //   ' e8c8 -  4,0,2,0
+    // 
+
+    if ( cp == KING && p == PLAYER_TWO &&  startCol == 4 && startRow ==0 && endCol == 6 && endRow == 0 ) {
+        // move black rook from right
+        board[7][0] = (CHESS_PIECE){EMPTY, NO_PLAYER};
+        clear_space( 7, 0 );
+        board[5][0] = (CHESS_PIECE){ROOK, p};
+
+    } else if ( cp == KING && p == PLAYER_TWO && startCol == 4 && startRow ==0 && endCol == 2 && endRow == 0 ) {
+        // move rook from left
+        board[0][0] = (CHESS_PIECE){EMPTY, NO_PLAYER};
+        clear_space( 0, 0 );
+        board[3][0] = (CHESS_PIECE){ROOK, p};
+    } else if ( cp == KING && p == PLAYER_ONE && startCol == 4 && startRow ==7 && endCol == 6 && endRow == 7 ) {
+        // move rook from right
+        board[7][7] = (CHESS_PIECE){EMPTY, NO_PLAYER};
+        clear_space( 7, 7 );
+        board[5][7] = (CHESS_PIECE){ROOK, p};
+    } else if ( cp == KING && p == PLAYER_ONE && startCol == 4 && startRow ==7 && endCol == 2 && endRow == 7 ) {
+        // move rook from left
+        board[0][7] = (CHESS_PIECE){EMPTY, NO_PLAYER};
+        clear_space( 0, 7 );
+        board[3][7] = (CHESS_PIECE){ROOK, p};
+    }
+    // if pawn,
+
+    draw_pieces();
+    clear_space( startCol, startRow );
+
+    //}
+}
+
+*/
 
 
 static void setup_charset() {
@@ -183,6 +313,7 @@ static void setup_charset() {
 
 
   // piece test 
+  /*
   screen_memory [ 16 ] =  10;  // black is actual offset
   screen_memory [ 32 ] =  11;
   screen_memory [ 48 ] =  0;  
@@ -192,7 +323,7 @@ static void setup_charset() {
   screen_memory [ 256 ] =  11+128;
   screen_memory [ 208 ] =  0;  
   screen_memory [ 224] =  12+128;
-
+*/
 
   // fake cursor
   screen_memory [ 112 + 2 ] =  28 + 64;  //  cursor color is +64
@@ -427,6 +558,11 @@ int main(void)
 
   //    setup_network_game();
   cursor_init();
+
+
+    clear_board();
+    setup_pieces();
+    draw_pieces();
 
   inputWait = 0;
   current_player = PLAYER_ONE;
