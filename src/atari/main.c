@@ -58,8 +58,9 @@ typedef struct {
     uint8_t is_biroqu[2]; // is a bishop, rook, or queen
 } CHECKERS;
 
-uint8_t current_player;
-uint8_t who_am_i;
+uint8_t current_player =NO_PLAYER;
+uint8_t who_am_i = NO_PLAYER;
+uint8_t inputWait = 0;
 
 void init_dlist(void);
 
@@ -68,7 +69,7 @@ extern uint8_t message_memory[];
 extern uint8_t pmg_memory[380];
 extern uint8_t font[];
 extern uint8_t pmg_data[1024];
-
+//
 //static uint8_t board_data[BOARD_SIZE];
 
 static void setup_charset() {
@@ -149,6 +150,153 @@ static void setup_pm_graphics() {
 
 }
 
+
+
+void cursor_init( CURSOR *cursor, Sprite *sprite, Sprite *selected_sprite ) {
+    cursor->col = 4;  // board position
+    cursor->row = 4;
+    cursor->pos_x = cursor->col * cursorStep + cursorColStart;
+    cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
+    cursor->sprite =  sprite;
+
+    cursor->sel_col = -1;  // not on board
+    cursor->sel_row = -1;
+    cursor->sel_pos_x = -32;
+    cursor->sel_pos_y = -32;
+    cursor->selected_spr = selected_sprite;
+    SPR_setAnim( cursor->selected_spr, 1 );
+    SPR_setVisibility( cursor->selected_spr, HIDDEN );
+}
+
+bool cursor_move( CURSOR *cursor, u16 joypad ) {
+    bool didMove = FALSE;
+    if( joypad & BUTTON_LEFT ) {
+        cursor->col--;
+        if( cursor->col < 0 ) {
+            cursor->col = 7;
+        }
+        cursor->pos_x = cursor->col * cursorStep + cursorColStart;
+        didMove = TRUE;
+    } 
+    if( joypad & BUTTON_RIGHT ) {
+        cursor->col++;
+        if( cursor->col > 7 ) {
+            cursor->col = 0;
+        }
+        cursor->pos_x = cursor->col * cursorStep + cursorColStart;
+        didMove = TRUE;
+    } 
+    if( joypad & BUTTON_UP ) {
+        cursor->row--;
+        if( cursor->row < 0 ) {
+            cursor->row = 7;
+        }
+        cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
+        didMove = TRUE;
+    }
+    if( joypad & BUTTON_DOWN ) {
+        cursor->row++;
+        if( cursor->row > 7 ) {
+            cursor->row = 0;
+        }
+        cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
+        didMove = TRUE;
+    }
+    return didMove;
+}
+
+void cursor_update_from_pos( CURSOR *cursor, s8 col, s8 row, s8 sel_col, s8 sel_row ) {
+    cursor->col = col;
+    cursor->pos_x = cursor->col * cursorStep + cursorColStart;
+    cursor->row = row;
+    cursor->pos_y = cursor->row * cursorStep + cursorRowStart;
+
+    cursor->sel_col = sel_col;
+    cursor->sel_pos_x = cursor->sel_col * cursorStep + cursorColStart;
+    cursor->sel_row = sel_row;
+    cursor->sel_pos_y = cursor->sel_row * cursorStep + cursorRowStart;
+    if( cursor->sel_col >= 0 ) {
+        SPR_setVisibility( cursor->selected_spr, VISIBLE );
+    } else {
+        SPR_setVisibility( cursor->selected_spr, HIDDEN );
+    }
+}
+
+void cursor_clear_selected( CURSOR* cursor ) {
+    char message[40];
+    cursor->sel_col = -1;
+    cursor->sel_row = -1;
+    cursor->sel_pos_x = -32;
+    cursor->sel_pos_y = -32;
+    SPR_setVisibility( cursor->selected_spr, HIDDEN );
+    //char message[40];
+    strclr(message);
+    sprintf( message, "X: %d y: %d sx: %d sy %d    ", cursor->col, cursor->row, cursor->sel_col, cursor->sel_row);
+}
+
+
+
+bool cursor_action( CURSOR* cursor, CHESS_PIECE brd[8][8], u8 player ) {
+    if( cursor->sel_col < 0 ) {
+        // no piece selected yet, check if player owns the current piece.
+        if( brd[(u8)cursor->col][(u8)cursor->row].player == player ) { 
+            cursor->sel_col = cursor->col;
+            cursor->sel_row = cursor->row;
+            cursor->sel_pos_x = cursor->sel_col * cursorStep + cursorColStart;
+            cursor->sel_pos_y = cursor->sel_row * cursorStep + cursorRowStart;
+            SPR_setVisibility( cursor->selected_spr, VISIBLE );
+        }
+    } else {
+        //char message[40];
+        //strclr(message);
+        //sprintf( message, "X: %d y: %d sx: %d sy %d    ", cursor->col, cursor->row, cursor->sel_col, cursor->sel_row);
+        //VDP_drawText( message, 0, 1 );
+        // return true if destination is clear or a different player, BUT DON"T UPDATE BOARD 
+        return ( brd[(u8)cursor->col][(u8)cursor->row].player != player );
+
+    }
+    return false;
+}
+
+
+
+
+static void handle_my_turn() {
+  // read joystick to move cursor
+  if( inputWait == 0 ) {
+    /* SEGA!
+                u16 joypad  = JOY_readJoypad( JOY_1 );
+                // update local position
+                if( cursor_move( &cursor, joypad ) == TRUE ) {
+                    XGM_startPlayPCM(SND_MOVE,1,SOUND_PCM_CH2);
+                    inputWait = INPUT_WAIT_COUNT;
+                }
+                // if A, 
+                if( joypad & BUTTON_A ) {
+                    bool trySend =  cursor_action( &cursor, board, currentPlayer );
+                    inputWait = INPUT_WAIT_COUNT;
+                    if( trySend ) {
+                        // send possible move
+                        if( send_move( &cursor, 1 ) ) {
+                           currentPlayer = currentPlayer == PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE; 
+                        }
+                    }
+                } else if( joypad & BUTTON_C ) {
+                    cursor_clear_selected( &cursor );
+                    inputWait = INPUT_WAIT_COUNT;
+                } 
+     */
+
+  } else {
+      if ( input_wait > 0 ) {
+          --inputWait;
+      }
+  }
+
+ 
+
+}
+
 int main(void)
 {
 
@@ -170,6 +318,7 @@ int main(void)
   // screen_print_at(0, 1, "PLAYER:");
 
   //    setup_network_game();
+
 
   for (;;) {
     if (current_player == who_am_i) {
