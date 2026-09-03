@@ -73,7 +73,7 @@ typedef struct
   int8_t row;     // board row
   //int8_t txt_x;   // sega used screen position because sprite. using text here.
   //int8_t txt_y;
-  int8_t sel_col; // selected board column
+  int8_t sel_col; // selected board column (-1 nothing selected)
   int8_t sel_row; // selected board row
   //int16_t sel_txt_x;
   //int16_t sel_txt_y;
@@ -491,6 +491,7 @@ bool cursor_action( CHESS_PIECE brd[8][8], uint8_t player ) {
   if( chess_cursor.sel_col < 0 ) {
     // no piece selected yet, check if player owns the current piece.
     if( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player == player ) { 
+      // yes, so select it.
       chess_cursor.sel_col = chess_cursor.col;
       chess_cursor.sel_row = chess_cursor.row;
       //chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
@@ -498,30 +499,51 @@ bool cursor_action( CHESS_PIECE brd[8][8], uint8_t player ) {
       ////SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
     }
   } else {
-    //char message[40];
-    //strclr(message);
-    //sprintf( message, "X: %d y: %d sx: %d sy %d    ", chess_cursor.col, chess_cursor.row, chess_cursor.sel_col, chess_cursor.sel_row);
-    //VDP_drawText( message, 0, 1 );
-    // return true if destination is clear or a different player, BUT DON"T UPDATE BOARD 
-    return ( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player != player );
+    // Sega has a C button, atari doesn't. deselect if we're on the piece we selected
+    if( chess_cursor.col == chess_cursor.sel_col && chess_cursor.row == chess_cursor.sel_row ) {
+      // deselect
+      chess_cursor.sel_col = -1;
+      chess_cursor.sel_row = -1;
 
+    } else {
+      // return true if destination is clear or a different player, BUT DON'T UPDATE BOARD
+      //   send_move() will be called and it'll ask the server if it was valid.
+      return ( brd[(uint8_t)chess_cursor.col][(uint8_t)chess_cursor.row].player != player );
+
+    }
   }
   return false;
 }
 
-
+static void flash_selected() {
+  if( chess_cursor.sel_col > -1 ) {
+    // check pos
+    uint16_t pos = BOARD_START + (chess_cursor.sel_row * 32) + (chess_cursor.sel_col <<1);
+    if( screen_memory[ pos ]  == 28 + 64 ) {
+      update_square( chess_cursor.sel_col, chess_cursor.sel_row );
+    } else {
+      screen_memory[ pos ] = 28 + 64;
+      screen_memory[ pos+16 ] = 29 + 64;
+    }
+  }
+}
 
 static void handle_my_turn() {
   // read joystick to move cursor
   if( inputWait == 0 ) {
     uint8_t stick = OS.stick0;
+    flash_selected();
     inputWait = INPUT_WAIT_COUNT;
     if( cursor_move( stick ) == true ) {
+      // TODO: play some sort of sound.
     }
+
+    // button pressed.
     if( !OS.strig0 ) {
       // need 
       bool trySend =  cursor_action( board, current_player );
       if( trySend ) {
+        // send possible move to server
       }
     }
     /* SEGA!
@@ -585,7 +607,7 @@ int main(void)
   setup_pieces();
   draw_pieces();
 
-      inputWait = INPUT_WAIT_COUNT;
+  inputWait = INPUT_WAIT_COUNT;
   current_player = PLAYER_ONE;
   who_am_i = PLAYER_ONE;
 
