@@ -14,7 +14,7 @@ AK_LOBBY_KEY_SERVER = 6     ' 5 Card Stud Client registered as Lobby appkey 1
 
 ' my AppKey
 AK_CREATOR_ID = $5364       ' creator id
-AK_APP_ID = 1               ' minimal 
+AK_APP_ID = 240             ' minimal 
 AK_KEY_SHOWHELP = 0         ' Shown help
 
 DATA NAppKeyBlock()=0,0,0
@@ -38,7 +38,7 @@ if serverEndpoint$<>""
   next
 else
   ' Default to known server if not specified by lobby. Override for local testing
-  serverEndpoint$="http://10.25.50.61:8080/"
+  serverEndpoint$="http://irata.greggallardo.com:5364/"
   'serverEndpoint$="http://192.168.2.41:8080/"
   'query$="?table=dev7"
 endif
