@@ -10,22 +10,31 @@
 AK_LOBBY_CREATOR_ID = 1     ' FUJINET Lobby
 AK_LOBBY_APP_ID  = 1        ' Lobby Enabled Game
 AK_LOBBY_KEY_USERNAME = 0   ' Lobby Username key
-AK_LOBBY_KEY_SERVER = 6     ' 5 Card Stud Client registered as Lobby appkey 1
+AK_LOBBY_KEY_SERVER = 240     ' IMPORTANT: THIS MUST MATCH THE ID YOU REGISTERD. DON'T USE 240 ON THE REAL LOBBY
 
 ' my AppKey
 AK_CREATOR_ID = $5364       ' creator id
-AK_APP_ID = 240             ' minimal 
+AK_APP_ID = 1               ' id relative to creator 
 AK_KEY_SHOWHELP = 0         ' Shown help
 
 DATA NAppKeyBlock()=0,0,0
 
 ' Read server endpoint stored from Lobby
-serverEndpoint$="NA"
+serverEndpoint$="NotSet"
+' temp buffer for reading the WRONG values, should end up empty after reading against AK_CREATOR_ID and AK_APP_ID
+tempBuffer$="temp"
 query$="NA"
 
-' IMPORTANT  in C common  welcomActionVerifyServerDetails() calls
-'read_appkey(AK_LOBBY_CREATOR_ID, AK_LOBBY_APP_ID, AK_LOBBY_KEY_SERVER, tempBuffer);
+? serverEndpoint$
+? tempBuffer$
+? "---"
+' IMPORTANT  in C 
+' ./src/screens.c:  read_appkey(AK_LOBBY_CREATOR_ID,  AK_LOBBY_APP_ID, AK_LOBBY_KEY_SERVER, tempBuffer);   
+@NReadAppKey AK_CREATOR_ID, AK_APP_ID, AK_LOBBY_KEY_SERVER, &tempBuffer$
 @NReadAppKey AK_LOBBY_CREATOR_ID, AK_LOBBY_APP_ID, AK_LOBBY_KEY_SERVER, &serverEndpoint$
+? serverEndpoint$
+? tempBuffer$
+? "---"
 
 ' Parse endpoint url into server and query
 if serverEndpoint$<>""
