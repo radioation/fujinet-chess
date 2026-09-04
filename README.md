@@ -20,8 +20,8 @@ Supported Gaming Platforms:
 * Atari 8-bit Computers
 
 Planned clients
-* Sega Genesis (retrolink tcp)
-* GameBoy Advance (retrolink tcp)
-* C64 (Meatloaf/FujiNET)
-
+* Sega Genesis (retrolink TCP over controller port)
+* GameBoy Advance (TCP over UART, possibly fujinet if I can sort out how to do that on an ESP32)
+* C64 (Meatloaf/FujiNet)
+* Apple 2 (FujiNet)
 
