@@ -1,6 +1,6 @@
 # tcp_protocol.py
 import socketserver, threading
-from api.chess_game import new_game, get_game, get_two_player_games
+from fujifish.api.chess_game import new_game, get_game, get_two_player_games
 import re
 
 

@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, Response
 
-from api.chess_game import new_game, get_game
+from fujifish.api.chess_game import new_game, get_game
 
 #######################################################
 #

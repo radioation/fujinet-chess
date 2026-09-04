@@ -1,8 +1,8 @@
 
 import pytest
 import json
-from api.http_api import app
-from api.chess_game import ChessGame
+from fujifish.api.http_api import app
+from fujifish.api.chess_game import ChessGame
 
 
 def test_newgame_SW():

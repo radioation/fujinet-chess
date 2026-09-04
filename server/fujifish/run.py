@@ -4,8 +4,8 @@ from dotenv import load_dotenv
 
 import threading, socketserver
 
-from api.http_api import app #, initialize_tables
-from api.tcp_api import TcpChessHandler
+from fujifish.api.http_api import app #, initialize_tables
+from fujifish.api.tcp_api import TcpChessHandler
 
 # don't lobby yet.
 # from lobby.lobby_client import init_lobby
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     load_dotenv()    
 
     server_host = os.getenv('SERVER_HOST', "0.0.0.0")
-    server_port = int(os.getenv('SERVER_PORT', 8080))
+    server_port = int(os.getenv('SERVER_PORT', 5364))
 
 
     #lobby_endpoint = os.getenv('LOBBY_ENDPOINT_UPSERT')

@@ -1,4 +1,11 @@
 
+# TODO FILL OUT
+
+* start lobby
+* start testsvr pointed at lobby
+
+
+
 ```bash
  # get state without joining
  curl -X GET "http://10.25.50.61:5364/view?player=gus&table=lounge"

@@ -4,9 +4,9 @@ import threading
 import time
 import socketserver
 
-from api.tcp_api import TcpChessHandler
+from fujifish.api.tcp_api import TcpChessHandler
 
-from api.chess_game import ChessGame
+from fujifish.api.chess_game import ChessGame
 
 
 @pytest.fixture
