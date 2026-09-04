@@ -44,6 +44,47 @@ You have to provide
 
 ## Game Server
 
+0. Run from the parent directory not fujifish
+```bah
+cd {YOUR_PATH}/fujinet-chess/server
+```
+
+1. setup python the way you would on your distro
+
+```bash
+sudo dnf install python3 python3-pip pytest
+
+python3 -m venv env
+. env/bin/activate
+
+pip3 install dotenv requests
+```
+
+2. setup an env
+
+```bash
+cp .env_example .env
+vim .env
+```
+you'll need to 
+* change `LOBBY_CLIENT_APP_KEY=<YOU NEED A REGISTRED APP KEY HERE>  ` by giving it an APP key 
+* set the `GAME_CLIENT_PLATFORMS` path to the game client 
+
+
+3. run it
+
+```bash
+ python -m testsvr.run
+```
+
+## Game client
+
+go to `fujinet-chess/server/testclient` folder
+
+```bash
+fb minclient.bas
+```
+copy the resulting xex to your tnfs folder
 
 
 # Testing
