@@ -4,9 +4,13 @@
 #include <gba_interrupt.h>
 #include <gba_systemcalls.h>
 #include <gba_input.h>
+#include <gba_dma.h>
+#include <gba_sprites.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "chessboard.h"
+#include "chesspieces.h"
 //---------------------------------------------------------------------------------
 // Program entry point
 //---------------------------------------------------------------------------------
@@ -20,11 +24,25 @@ int main(void) {
 	irqInit();
 	irqEnable(IRQ_VBLANK);
 
-	consoleDemoInit();
+//	consoleDemoInit();
 
-	// ansi escape sequence to set print co-ordinates
-	// /x1b[line;columnH
-	iprintf("\x1b[10;10HHello World!\n");
+    REG_DISPCNT = ( MODE_0 | BG0_ON | BG1_ON | OBJ_ENABLE | OBJ_1D_MAP );
+
+    // setup palettes
+    dmaCopy( chessboardPal, BG_PALETTE, chessboardPalLen );
+    dmaCopy( chesspiecesPal, SPRITE_PALETTE, chesspiecesPalLen );
+
+
+    // setup tiles
+    dmaCopy( chessboardTiles, TILE_BASE_ADR(0), chessboardTilesLen );
+    dmaCopy( chessboardMap, MAP_BASE_ADR(8), chessboardMapLen );
+    dmaCopy( chesspiecesTiles, OBJ_BASE_ADR, chesspiecesTilesLen );
+
+    REG_BG0CNT = ( BG_SIZE_0 | BG_16_COLOR | TILE_BASE(0) | MAP_BASE(8) );
+    REG_BG1CNT = ( BG_SIZE_0 | BG_16_COLOR   );
+
+
+	
 
 	while (1) {
 		VBlankIntrWait();
