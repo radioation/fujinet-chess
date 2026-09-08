@@ -13,7 +13,7 @@ platforms.
 *NOTE* This is a Very EARLY WIP chess server for Fujinet (and other) clients. It uses
 [Stockfish](https://stockfishchess.org) as the Chess engine for single player games. 
 I'm also using [python-chess](https://github.com/niklasf/python-chess)
-to manage the chess board.
+to manage the chess board. __Definietly not working yet__
 
 
 Supported Gaming Platforms:
