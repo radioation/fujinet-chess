@@ -11,6 +11,9 @@
 
 #include "chessboard.h"
 #include "chesspieces.h"
+
+#define OAM_MEM ((volatile OBJATTR *)0x07000000)
+
 //---------------------------------------------------------------------------------
 // Program entry point
 //---------------------------------------------------------------------------------
@@ -39,9 +42,12 @@ int main(void) {
     dmaCopy( chesspiecesTiles, OBJ_BASE_ADR, chesspiecesTilesLen );
 
     REG_BG0CNT = ( BG_SIZE_0 | BG_16_COLOR | TILE_BASE(0) | MAP_BASE(8) );
-    REG_BG1CNT = ( BG_SIZE_0 | BG_16_COLOR   );
 
 
+//    // clear things out
+//    for(int i = 0; i < 128; i++) {
+//        OAM_MEM[i].attr0 = ATTR0_DISABLED;
+//    }
 	
 
 	while (1) {
