@@ -86,21 +86,22 @@ void draw_pieces(){
         for (int col = 0; col < 8; col++) {
             if( board[col][row].player > 0 ) {
                 int32_t playerPiecesOffset = 0;
+                int32_t currentOffset = 2* (col + row* boardRowStride );
                 if( board[col][row].player == 2 ) {
                     playerPiecesOffset = 24;
                 }
                 // set tile in MAP
                 map_vram[ boardStartCol + boardStartRow * boardRowStride
-                         + (col*2 + 2*row*boardRowStride)  
+                         + currentOffset
                         ] = playerPiecesOffset +  board[col][row].type*4 + CHAR_PALETTE(1) ;
                 map_vram[ boardStartCol + boardStartRow * boardRowStride
-                         + (col*2 + 2*row*boardRowStride)  +1 
+                         + currentOffset  +1 
                         ] = playerPiecesOffset +  board[col][row].type*4 + 1 + CHAR_PALETTE(1);;
                 map_vram[ boardStartCol + boardStartRow * boardRowStride + boardRowStride
-                         + (col*2 + 2*row*boardRowStride)  
+                         + currentOffset
                         ] = playerPiecesOffset +  board[col][row].type*4+2 + CHAR_PALETTE(1);;
                 map_vram[ boardStartCol + boardStartRow * boardRowStride + boardRowStride 
-                         + (col*2 + 2*row*boardRowStride)  +1 
+                         + currentOffset  +1 
                             ] = playerPiecesOffset +  board[col][row].type*4 + 3 + CHAR_PALETTE(1);;
 
 //                VDP_setTileMapEx( BG_A, pieces_img.tilemap, TILE_ATTR_FULL(PAL1, TRUE, FALSE, FALSE, piecesTileIndex),    
@@ -415,9 +416,9 @@ int main(void) {
         map_vram[i] = 49;
     }                                                                                                         
     
-    for( int i=0; i < 2*6*4; ++i ) {      
-        map_vram[i] = i + CHAR_PALETTE(1) ;
-    }                                                                                                         
+//    for( int i=0; i < 2*6*4; ++i ) {      
+//        map_vram[i] = i + CHAR_PALETTE(1) ;
+//    }                                                                                                         
     REG_BG1CNT = ( BG_SIZE_0 | BG_16_COLOR | TILE_BASE(0) | MAP_BASE(16) );
     REG_BG0CNT = ( BG_SIZE_0 | BG_16_COLOR | TILE_BASE(1) | MAP_BASE(17) );
 
