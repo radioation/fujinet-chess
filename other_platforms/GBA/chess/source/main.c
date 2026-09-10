@@ -249,11 +249,11 @@ void cursor_init(  int32_t cursor_tile_start, int32_t selected_tile_start) {
 
     OAM_MEM[0].attr0 = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE | OBJ_Y( cursor.pos_y );
     OAM_MEM[0].attr1 = cursor.attr_size | OBJ_X(cursor.pos_x);
-    OAM_MEM[0].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR(0) | OBJ_PRIORITY(0);
+    OAM_MEM[0].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR(0) | OBJ_PRIORITY(1);
 
     OAM_MEM[1].attr0 = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE | OBJ_Y( cursor.sel_pos_y );
     OAM_MEM[1].attr1 = cursor.attr_size | OBJ_X(cursor.sel_pos_x);
-    OAM_MEM[1].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR( cursor.tile_step * cursor.frame_count) | OBJ_PRIORITY(0);
+    OAM_MEM[1].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR( cursor.tile_step * cursor.frame_count) | OBJ_PRIORITY(1);
 
 
 
@@ -361,18 +361,19 @@ return false;
 void sprite_update() {
     cursor.ticks++;
     if ( cursor.ticks > cursor.frame_delay ) {
-        cursor.ticks = 0;
-        cursor.frame++;
-        if( cursor.frame >= cursor.frame_count ) {
-            cursor.frame = 0;
-        }
+     // kind of annoying. 
+     //   cursor.ticks = 0; 
+     //   cursor.frame++;
+     //   if( cursor.frame >= cursor.frame_count ) {
+     //       cursor.frame = 0;
+     //   }
         OAM_MEM[0].attr0 = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE | OBJ_Y( cursor.pos_y );
         OAM_MEM[0].attr1 = cursor.attr_size | OBJ_X(cursor.pos_x);
-        OAM_MEM[0].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR( cursor.frame * cursor.frame_count) | OBJ_PRIORITY(0);
+        OAM_MEM[0].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR( cursor.frame * cursor.frame_count) | OBJ_PRIORITY(1);
 
         OAM_MEM[1].attr0 = ATTR0_NORMAL | ATTR0_COLOR_16 | ATTR0_SQUARE | OBJ_Y( cursor.sel_pos_y );
         OAM_MEM[1].attr1 = cursor.attr_size | OBJ_X(cursor.sel_pos_x);
-        OAM_MEM[1].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR( ( cursor.frame +  cursor.tile_step ) * cursor.frame_count) | OBJ_PRIORITY(0);
+        OAM_MEM[1].attr2 = ATTR2_PALETTE(0) | OBJ_CHAR( ( cursor.frame +  cursor.tile_step ) * cursor.frame_count) | OBJ_PRIORITY(1);
 
 
     }
@@ -419,8 +420,8 @@ int main(void) {
 //    for( int i=0; i < 2*6*4; ++i ) {      
 //        map_vram[i] = i + CHAR_PALETTE(1) ;
 //    }                                                                                                         
-    REG_BG1CNT = ( BG_SIZE_0 | BG_16_COLOR | TILE_BASE(0) | MAP_BASE(16) );
-    REG_BG0CNT = ( BG_SIZE_0 | BG_16_COLOR | TILE_BASE(1) | MAP_BASE(17) );
+    REG_BG1CNT = ( BG_SIZE_0 | BG_PRIORITY(2) | BG_16_COLOR | TILE_BASE(0) | MAP_BASE(16) );
+    REG_BG0CNT = ( BG_SIZE_0 | BG_PRIORITY(0) | BG_16_COLOR | TILE_BASE(1) | MAP_BASE(17) );
 
     // clear things out
     for(int i = 0; i < 128; i++) {
