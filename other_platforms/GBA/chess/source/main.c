@@ -23,13 +23,13 @@
 
 // 
 typedef enum {
-    EMPTY = 0,
-    KING = 1, 
-    QUEEN = 2, 
-    ROOK = 3, 
-    BISHOP = 4, 
-    KNIGHT = 5, 
-    PAWN = 6 
+    KING = 0, 
+    QUEEN = 1, 
+    ROOK = 2, 
+    BISHOP = 3, 
+    KNIGHT = 4, 
+    PAWN = 5,
+    EMPTY = 6,
 } PIECE_TYPE;
 
 typedef enum {
@@ -52,9 +52,10 @@ typedef struct {
 
 CHESS_PIECE board[BOARD_SIZE][BOARD_SIZE]; // X, Y
 int piecesTileIndex = -1;
-const int32_t boardStartCol = 5;
+const int32_t boardStartCol = 4;
 const int32_t boardStartRow = 2;
-const int32_t boardStep = 2;  // 16x16 squares
+const int32_t boardPieceWidth = 2;  // 16x16 squares
+const int32_t boardRowStride = 32; 
 
 void setup_pieces() {
     // clear the board
@@ -80,13 +81,28 @@ void setup_pieces() {
 
 
 void draw_pieces(){
+    uint16_t* map_vram = (u16*)MAP_BASE_ADR( 17 );
     for (int row = 0; row < 8; row++) {
         for (int col = 0; col < 8; col++) {
             if( board[col][row].player > 0 ) {
-                s8 yStart = 0;
+                int32_t playerPiecesOffset = 0;
                 if( board[col][row].player == 2 ) {
-                    yStart = 3;
+                    playerPiecesOffset = 24;
                 }
+                // set tile in MAP
+                map_vram[ boardStartCol + boardStartRow * boardRowStride
+                         + (col*2 + 2*row*boardRowStride)  
+                        ] = playerPiecesOffset +  board[col][row].type*4 + CHAR_PALETTE(1) ;
+                map_vram[ boardStartCol + boardStartRow * boardRowStride
+                         + (col*2 + 2*row*boardRowStride)  +1 
+                        ] = playerPiecesOffset +  board[col][row].type*4 + 1 + CHAR_PALETTE(1);;
+                map_vram[ boardStartCol + boardStartRow * boardRowStride + boardRowStride
+                         + (col*2 + 2*row*boardRowStride)  
+                        ] = playerPiecesOffset +  board[col][row].type*4+2 + CHAR_PALETTE(1);;
+                map_vram[ boardStartCol + boardStartRow * boardRowStride + boardRowStride 
+                         + (col*2 + 2*row*boardRowStride)  +1 
+                            ] = playerPiecesOffset +  board[col][row].type*4 + 3 + CHAR_PALETTE(1);;
+
 //                VDP_setTileMapEx( BG_A, pieces_img.tilemap, TILE_ATTR_FULL(PAL1, TRUE, FALSE, FALSE, piecesTileIndex),    
 //                        boardStartCol + col * boardStep,  // PLANE X Dest in tiles
 //                        boardStartRow + row * boardStep,  // PLANE Y Dest in tiles
@@ -109,7 +125,7 @@ void draw_pieces(){
     }
 }
 
-void clear_space( s8 startCol, s8 startRow ) {
+void clear_space( int32_t startCol, int32_t startRow ) {
 //    VDP_setTileMapEx( BG_A, pieces_img.tilemap, TILE_ATTR_FULL(PAL1, TRUE, FALSE, FALSE, piecesTileIndex),    
 //            boardStartCol + startCol * boardStep,  // PLANE X Dest in tiles
 //            boardStartRow + startRow * boardStep,  // PLANE Y Dest in tiles
@@ -121,7 +137,7 @@ void clear_space( s8 startCol, s8 startRow ) {
 
 }
 
-void move_piece( s8 startCol, s8 startRow, s8 endCol, s8 endRow, s8 promotype ){
+void move_piece( int32_t startCol, int32_t startRow, int32_t endCol, int32_t endRow, int32_t promotype ){
     //if( do_move( startCol, startRow, endCol, endRow ) ) {
     PLAYER p = board[startCol][startRow].player;
     PIECE_TYPE cp = board[startCol][startRow].type;
@@ -411,8 +427,11 @@ int main(void) {
     }
 
 
-
     cursor_init( 0, 4 );	
+
+    setup_pieces();
+    draw_pieces();
+
     while (1) {
         VBlankIntrWait();
         // readKeys();
