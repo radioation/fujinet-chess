@@ -81,12 +81,14 @@ you'll need to
 
 ## Game client
 
-go to `fujinet-chess/server/testclient` folder
+0. go to `fujinet-chess/server/testclient` folder
+
+1. build with fastbasic compiler:
 
 ```bash
 fb minclient.bas
 ```
-copy the resulting xex to your tnfs folder
+3. copy the resulting xex to your tnfs folder
 
 
 # Testing
