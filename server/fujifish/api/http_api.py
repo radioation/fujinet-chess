@@ -1,7 +1,7 @@
 import os
 from flask import Flask, request, Response
 
-from fujifish.api.chess_game import new_game, get_game
+from fujifish.api.chess_game import GameTable, ChessGame, new_game, get_game
 
 #######################################################
 #
@@ -9,29 +9,125 @@ from fujifish.api.chess_game import new_game, get_game
 #
 app = Flask(__name__)
 
-@app.post("/newgame")
-def http_newgame():
-    body = request.get_data(as_text=True) or ""
-    print ("BODY: " + body)
-    mode = 'S'
-    player_1_side = 'W'
-    level = 3
-    lines = [ln.strip() for ln in body.splitlines() if ln.strip() != ""]
-    print(len(lines))
-    
-    if len(lines) > 0:
-        # first line shoudl be mode.
-        if lines[0] == 'D':
-            mode = 'D'
-        if len(lines) > 1:
-            if lines[1] == 'B':
-                player_1_side = 'B'
-            if len(lines) > 2:
-                level = int(lines[2] )
-    g = new_game(mode, player_1_side, level )
-    print( f"new game: {g.id} mode: {g.mode} side: {g.player_1_side}")
-    print( f"   p1: {g.player_1_id} p2: {g.player_2_id}")
-    return Response(g.id + ":" + g.player_1_id + "\n", mimetype="text/plain")
+
+
+
+class TableMutex:
+    def __init__(self) -> None:
+        self._locks: Dict[str, threading.Lock] = {}
+        self._guard = threading.Lock()
+
+    def Lock(self, key: str) -> Callable[[], None]:
+        # Return an unlock() closure (to mirror Go style)
+
+        with self._guard:
+            lock = self._locks.get(key)
+            if lock is None:
+                lock = threading.Lock()
+                self._locks[key] = lock
+        lock.acquire()
+
+        unlocked = False
+
+        def unlock() -> None:
+            nonlocal unlocked # not part of inner function
+            if not unlocked:
+                lock.release()
+                unlocked = True
+
+        # return unlock() for unlocking.
+        return unlock
+
+
+STATE_MAP: Dict[ str, ChessGame ] = {}
+TABLES : List[GameTable]  = []
+table_mutex = TableMutex()
+
+
+def initialize_tables():
+
+    tables_json = os.getenv("GAME_SERVER_TABLES", "" )
+    print(tables_json)
+    raw_list = json.loads( tables_json )
+    for table in raw_list:
+        servername = table.get("servername")
+        tablename = table.get("table").lower()
+        bot_level = int(table.get("bot_level"))
+        register_lobby = int(table.get("register_lobby"))
+        table_obj, chess_game = create_table( servername, tablename, bot_level, register_lobby )
+        TABLES.append(table_obj)
+        STATE_MAP[ tablename ] =chess_game 
+        game_state.update_lobby()
+
+
+def get_state( table:str, player:str ) -> Tuple[ Optional[GameState], Callable[ [], None]]:
+    tbl = table.lower()
+    plyr = ""
+    if len(player) > 0:
+        plyr = player.lower()
+
+    unlock_fcn = table_mutex.Lock( tbl )
+
+    tmp_state = STATE_MAP.get( tbl )
+    if tmp_state is not None:
+        state = copy.deepcopy( tmp_state )
+        state.set_client_player_by_name( plyr )
+
+    return state, unlock_fcn
+
+
+def save_state( state: GameState ):
+    STATE_MAP[ state.table] = state
+
+
+def cleanup():
+    for table, state in STATE_MAP.items():
+        try:
+            unlock_fcn = table_mutex.Lock( table )
+            print("Try delete: " + state.servername )
+            state.delete_from_lobby()
+            unlock_fcn()
+        except Exception as e:
+            print(f"[cleanup] failed to delete lobby for table={getattr(gs, 'table', '?')}: {e}")
+
+
+# Register the handlers
+def shutdown_handler( signal_int, frame ):
+    print(f"Caught signal: {signal_int}")
+    cleanup()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, shutdown_handler)
+signal.signal(signal.SIGTERM, shutdown_handler)
+
+
+
+
+
+#@app.post("/newgame")
+#def http_newgame():
+#    body = request.get_data(as_text=True) or ""
+#    print ("BODY: " + body)
+#    mode = 'S'
+#    player_1_side = 'W'
+#    level = 3
+#    lines = [ln.strip() for ln in body.splitlines() if ln.strip() != ""]
+#    print(len(lines))
+#    
+#    if len(lines) > 0:
+#        # first line shoudl be mode.
+#        if lines[0] == 'D':
+#            mode = 'D'
+#        if len(lines) > 1:
+#            if lines[1] == 'B':
+#                player_1_side = 'B'
+#            if len(lines) > 2:
+#                level = int(lines[2] )
+#    g = new_game(mode, player_1_side, level )
+#    print( f"new game: {g.id} mode: {g.mode} side: {g.player_1_side}")
+#    print( f"   p1: {g.player_1_id} p2: {g.player_2_id}")
+#    return Response(g.id + ":" + g.player_1_id + "\n", mimetype="text/plain")
+
 
 @app.post("/joingame")
 def http_joingame():

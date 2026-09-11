@@ -33,7 +33,7 @@ class GameTable:
     bot_level: int
 
 @dataclass
-class ChessGameState:
+class ChessGame:
     active_player: int
     players: List[Player]
     client_player: int
@@ -225,18 +225,30 @@ class ChessGameState:
 GAMES = {}
 GAMES_LOCK = threading.Lock()
 
-def new_game(mode,side,level) -> ChessGame:
-    g = ChessGame(mode,side,level)
-    GAMES[g.id] = g
-    return g
-
-def get_game(gid: str) -> ChessGame | None:
-    return GAMES.get(gid)
 
 
-def get_two_player_games():
-    two_player_games = [ key for key, value in GAMES.items() if value.mode == "D"]
-    return two_player_games
+def create_table( table: str, server_name: str, bot_level: int, register_lobby: bool ) -> (GameTable, GameState) :
+
+    chess_game = ChessGame( table, server_name, bot_level, register_lobby )
+
+    table_obj = GameTable( name = server_name, table = table )
+
+    return table_obj, chess_game
+
+
+
+#def new_game(mode,side,level) -> ChessGame:
+#    g = ChessGame(mode,side,level)
+#    GAMES[g.id] = g
+#    return g
+#
+#def get_game(gid: str) -> ChessGame | None:
+#    return GAMES.get(gid)
+#
+#
+#def get_two_player_games():
+#    two_player_games = [ key for key, value in GAMES.items() if value.mode == "D"]
+#    return two_player_games
 
 
 
