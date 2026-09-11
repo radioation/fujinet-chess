@@ -679,7 +679,7 @@ int main(void)
   init_dlist();
   //////////////////////////////////////////////////////////////
   network_init();
-  strcpy( devicespec, "N:TCP://10.25.50.61:6510/" );
+  //strcpy( devicespec, "N:TCP://10.25.50.61:6510/" );
   
 
   // screen_print_at(0, 1, "PLAYER:");

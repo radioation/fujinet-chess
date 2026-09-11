@@ -21,7 +21,7 @@ class GameTable:
     table: str    # description, 
     name: str     # short name (3 chars)
     current_players: int = 0
-    max_players: int = 0
+    max_players: int = MAX_PLAYERS
 
 
 @dataclass 
@@ -63,7 +63,8 @@ class ChessGame:
         self.max_players = 2
         self.moves = []
         self.lobby = get_lobby()
-        if bot_level is None:
+        if bot_level < 1:
+            print("NO SYNTH")
             self.skill_level = ""
             self.engine_config = ""
         else:
@@ -77,16 +78,36 @@ class ChessGame:
                 step = (elo_max - elo_min) / 9  # 9 intervals (levels 1–9)
                 target_elo = int(elo_min + (self.skill_level - 1) * step)
                 self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
+            print(f'>> Got bot level: {bot_level} use {self.engine_config}')
             self.add_player( "BOT" + str( self.skill_level ), True )
 
     def add_player( self, player: str, is_bot: bool ) -> None:
-        print( f'adding player {player} to array of size {len(self.players)}')
         if len(self.players) == self.max_players:
+            print( f'>> at player max {len(self.players)}')
             return
+        print( f'>> Adding player {player} to array of size {len(self.players)}')
 
         new_player = Player( name = player, side = '', is_bot = is_bot );
+        self.players.append(new_player)
 
-    
+
+    def set_client_player_by_name( self, player:str ) -> None:
+        # no name, just a viewer
+        if len( player ) == 0 :
+            self.client_player = -1
+            return
+        # has a name, so probably has an index in players list
+        for index, item in enumerate( self.players ):
+            if item.name == player:
+                break
+        else:
+            index = -1
+        self.client_player = index
+
+        if self.client_player < 0 and len( self.players ) < self.max_players :
+            self.add_player( player, False )
+            self.client_player = len( self.players) - 1
+            self.update_lobby()    
 
 #    def __init__(self, mode = 'S', player_1_side = None, level = 3, game_id = None ):
 #        if game_id is None:
@@ -142,9 +163,12 @@ class ChessGame:
 
 
     def get_human_player_count_info(self) -> (int, int):
+        print(">> GET PLAYER COUNT")
         human_available_slots = int( os.getenv( "GAME_SERVER_MAX_PLAYERS", "2" ) )
+        print(f'>>   human_available_slots {human_available_slots}')
         human_player_count = 0
 
+        print(f'>>   self.players {self.players}')
         for player in self.players:
             if player.is_bot:
                 human_available_slots -= 1
