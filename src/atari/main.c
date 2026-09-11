@@ -391,65 +391,65 @@ static void setup_pm_graphics() {
 
 
 
-bool send_move( CURSOR* cursor, u8 type  ) {
-
-  // TODO: promote pawns...
-  int8_t move[5];
-  move[0] = FILE_X + cursor->sel_col;
-  move[1] = RANK_Y + 7 - cursor->sel_row;
-  move[2] = FILE_X + cursor->col;
-  move[3] = RANK_Y + 7 - cursor->row;
-  move[4] = 0;
-
-  memset( request,0, sizeof(request) ); 
-  sprintf(request,"M:%s:%s:%s\n", game_id, player_id, move );
-  // VDP_drawText("SEND REQUEST", 0, 0 );
-
-  //NET_sendMessage(request);
-  NET_SendString(request);
-
-
-  VDP_drawText("WAITING ", 20, 0 );
-  SYS_doVBlankProcess();
-  do { waitMs(100 ); } while(  Buffer_IsEmpty(&RxBuffer) );
-
-  text_cursor_y = 2;
-  s16 count = read_line( response, sizeof(response) );
-
-  VDP_drawText(response, 0, 1 );
-  SYS_doVBlankProcess();
-  waitMs(100);
-  /*
-     M:e78c2852:b6dc3dda
-     ERR:bad format
-     M:e78c2852:b6dc3dda:d2d3
-     ACK d7d5
-
-     M:e78c2852:b6dc3dda:d1d3
-     ACK illegal move
-     M:e78c2852:b6dc3dda:e2e4
-     ACK e7e6
-     */
-
-
-  if( strcmp( response, "ACK legal move" ) == 0 ) {
-    move_piece( cursor->sel_col, cursor->sel_row, cursor->col, cursor->row, 0 );
-    return true;
-  } else {
-    char message[40];
-    sprintf(message, "FAIL-%s-", response ); 
-    VDP_drawText(message, 0, 2 );
-    while(1) {
-      SYS_doVBlankProcess();
-      waitMs(100);
-    }
-
-  }
-
-  return false;
-
-}
-
+//bool send_move( CURSOR* cursor, uint8_t type  ) {
+//
+//  // TODO: promote pawns...
+//  int8_t move[5];
+//  move[0] = FILE_X + cursor->sel_col;
+//  move[1] = RANK_Y + 7 - cursor->sel_row;
+//  move[2] = FILE_X + cursor->col;
+//  move[3] = RANK_Y + 7 - cursor->row;
+//  move[4] = 0;
+//
+//  memset( request,0, sizeof(request) ); 
+//  sprintf(request,"M:%s:%s:%s\n", game_id, player_id, move );
+//  // VDP_drawText("SEND REQUEST", 0, 0 );
+//
+//  //NET_sendMessage(request);
+//  NET_SendString(request);
+//
+//
+//  VDP_drawText("WAITING ", 20, 0 );
+//  SYS_doVBlankProcess();
+//  do { waitMs(100 ); } while(  Buffer_IsEmpty(&RxBuffer) );
+//
+//  text_cursor_y = 2;
+//  int16_t count = read_line( response, sizeof(response) );
+//
+//  VDP_drawText(response, 0, 1 );
+//  SYS_doVBlankProcess();
+//  waitMs(100);
+//  /*
+//     M:e78c2852:b6dc3dda
+//     ERR:bad format
+//     M:e78c2852:b6dc3dda:d2d3
+//     ACK d7d5
+//
+//     M:e78c2852:b6dc3dda:d1d3
+//     ACK illegal move
+//     M:e78c2852:b6dc3dda:e2e4
+//     ACK e7e6
+//     */
+//
+//
+//  if( strcmp( response, "ACK legal move" ) == 0 ) {
+//    move_piece( cursor->sel_col, cursor->sel_row, cursor->col, cursor->row, 0 );
+//    return true;
+//  } else {
+//    char message[40];
+//    sprintf(message, "FAIL-%s-", response ); 
+//    VDP_drawText(message, 0, 2 );
+//    while(1) {
+//      SYS_doVBlankProcess();
+//      waitMs(100);
+//    }
+//
+//  }
+//
+//  return false;
+//
+//}
+//
 
 
 void read_status( ){
@@ -459,15 +459,14 @@ void read_status( ){
      */
 
   // send out STATUS command
-  strclr( request ); 
-  sprintf(request,"S:%s\n", game_id );
+  //sprintf(request,"S:%s\n", game_id );
   //NET_sendMessage(request);
-  NET_SendString(request);
+  //NET_SendString(request);
 
   // wait until we can read bytes.
   //while( ! NET_RXReady() ) {
   //}
-  s16 bytes = read_line( response, sizeof(response) );
+  //int16_t bytes = read_line( response, sizeof(response) );
 }
 
 
@@ -578,6 +577,7 @@ bool cursor_action( CHESS_PIECE brd[8][8], uint8_t player ) {
       //chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
       //chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
       ////SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
+      return true;
     }
   } else {
     // Sega has a C button, atari doesn't. deselect if we're on the piece we selected
@@ -585,7 +585,7 @@ bool cursor_action( CHESS_PIECE brd[8][8], uint8_t player ) {
       // deselect
       chess_cursor.sel_col = -1;
       chess_cursor.sel_row = -1;
-
+     
     } else {
       // return true if destination is clear or a different player, BUT DON'T UPDATE BOARD
       //   send_move() will be called and it'll ask the server if it was valid.
@@ -601,8 +601,10 @@ static void flash_selected() {
     // check pos
     uint16_t pos = BOARD_START + (chess_cursor.sel_row * 32) + (chess_cursor.sel_col <<1);
     if( screen_memory[ pos ]  == 28 + 64 ) {
+      // draw piece
       update_square( chess_cursor.sel_col, chess_cursor.sel_row );
     } else {
+      // draw cursor.
       screen_memory[ pos ] = 28 + 64;
       screen_memory[ pos+16 ] = 29 + 64;
     }
@@ -660,6 +662,8 @@ static void handle_my_turn() {
 
 }
 
+
+
 int main(void)
 {
 
@@ -674,9 +678,9 @@ int main(void)
 
   init_dlist();
   //////////////////////////////////////////////////////////////
-  // Networking setup
-
-
+  network_init();
+  strcpy( devicespec, "N:TCP://10.25.50.61:6510/" );
+  
 
   // screen_print_at(0, 1, "PLAYER:");
 

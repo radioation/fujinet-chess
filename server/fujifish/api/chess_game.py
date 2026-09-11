@@ -1,41 +1,149 @@
 import os
+import threading
+import copy
+
+from lobby.lobby_client import GameClient, LobbyClient, GamePlayer, get_lobby
+from dataclasses import dataclass, asdict, field
+from typing import List, Optional, Dict, Any
+import json
+
 import uuid
 import chess
 import chess.engine
 
 import threading
 
+MAX_PLAYERS = 2
+MIN_PLAYERS = 1
 
-class ChessGame:
-    def __init__(self, mode = 'S', player_1_side = 'W', level = 3):
-        self.id = str(uuid.uuid4())[:8].upper()
-        self.board = chess.Board()      
-        self.engine_moves = []          # list of chess engine moves
-        self.mode = mode                # single player 'S' or double player 'D'
-        self.player_1_side = player_1_side  # for single player, which side is the player
-                                        # that created the game: 'W', 'B'
-        self.player_1_id = str(uuid.uuid4())[:8].upper()
-        self.player_2_id = "NA"
-        self.curr_player = 1
-        if self.mode == 'D' and  player_1_side == 'B':
-            self.curr_player = 2
+@dataclass
+class GameTable:
+    table: str    # description, 
+    name: str     # short name (3 chars)
+    current_players: int = 0
+    max_players: int = 0
 
-        # Map skill level 1-10 to Stockfish config.
-        self.skill_level = max(1, min(10, level))
-        if level == 10:
-            # Full strength
-            self.engine_config = {"UCI_LimitStrength": False}
+
+@dataclass Player:
+    name: str
+    player_id: str  
+    move: str
+    side: str
+    is_bot: bool
+    bot_level: int
+
+@dataclass
+class ChessGameState:
+    active_player: int
+    players: List[Player]
+    client_player: int
+    table: str
+    servername: str
+    register_lobby: bool
+    max_players: int
+    lobby: lobbyClient
+    skill_level: int
+    engine_config: str
+    hash: str = ""
+
+    # if bot_level is None, no bot will be added.
+    def __init__( self, table: str, servername: str, bot_level: int, register_lobby: bool ):
+        self.active_player = -1
+        self.players = []
+        self.table = table
+        self.servername = servername
+        self.register_lobby = register_lobby
+        self.max_players = 2
+        self.moves = []
+        self.lobby = get_lobby()
+        if bot_level is None:
+            self.skill_level = ""
+            self.engine_config = ""
         else:
-            elo_min, elo_max = 1320, 3190
-            step = (elo_max - elo_min) / 9  # 9 intervals (levels 1–9)
-            target_elo = int(elo_min + (level - 1) * step)
-            self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
+            # Map skill level 1-10 to Stockfish config.
+            self.skill_level = max(1, min(10, bot_level))
+            if level == 10:
+                # Full strength
+                self.engine_config = {"UCI_LimitStrength": False}
+            else:
+                elo_min, elo_max = 1320, 3190
+                step = (elo_max - elo_min) / 9  # 9 intervals (levels 1–9)
+                target_elo = int(elo_min + (level - 1) * step)
+                self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
+            self.add_player( "BOT" + str( level ), True )
 
+    def add_player( self, player: str, is_bot: bool ) -> None:
+        print( f'adding player {player} to array of size {len(self.players)}')
+        if len(self.players) == self.max_players:
+            return
 
-    def join_game( self ):
-        if self.mode == 'D': 
-            self.player_2_id = str(uuid.uuid4())[:8].upper()
-        return self.player_2_id
+        new_player = Player( name = player, move = '', is_bot = is_bot );
+
+    
+
+#    def __init__(self, mode = 'S', player_1_side = None, level = 3, game_id = None ):
+#        if game_id is None:
+#            self.id = str(uuid.uuid4())[:8].upper()
+#        else:
+#            self.id = game_id
+#        self.board = chess.Board()      
+#        self.engine_moves = []          # list of chess engine moves
+#        self.mode = mode                # single player 'S' or double player 'D'
+#        self.player_1_side = player_1_side  # NA if not selected yet.
+#        self.player_1_id = str(uuid.uuid4())[:8].upper() # always set, 
+#        self.player_2_id = str(uuid.uuid4())[:8].upper() # always set but ma
+#        self.curr_player = 0    # 0 : no player
+#        if self.mode == 'D' :
+#            if player_1_side == 'W':
+#                self.curr_player = 1
+#            elif player_1_side == 'B':
+#                self.curr_player = 2
+#
+#        # Map skill level 1-10 to Stockfish config.
+#        self.skill_level = max(1, min(10, level))
+#        if level == 10:
+#            # Full strength
+#            self.engine_config = {"UCI_LimitStrength": False}
+#        else:
+#            elo_min, elo_max = 1320, 3190
+#            step = (elo_max - elo_min) / 9  # 9 intervals (levels 1–9)
+#            target_elo = int(elo_min + (level - 1) * step)
+#            self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
+#
+
+    def join_game( self, player_side = None ):
+        # two player game:
+        if self.mode == 'D':
+            # check if player 1 is set yet.
+            if self.player_1_side == None:
+                # not yet set, so joining player is #1
+
+                if player_side == None:  # Didn't pick, assign white.
+                    self.player_1_side = 'W'
+                    self.curr_player = 1
+                else:
+                    # they get to pick their side
+                    self.player_1_side = player_side
+                    if player_side == 'W':
+                        self_curr_player = 1
+                    else:
+                        self_curr_player = 2
+                return self.player_1_id
+            else:
+                # a player is already present, player 2 will take what they get and like it.
+                if self.player_1_side == 'W':
+                    self.player_2_side == 'B'
+                else:
+                    self.player_2_side == 'W'
+                return self.player_2_id
+        else:  # S
+            if player_side == None:
+                self.player_1_side = 'W'
+                self.curr_player = 1
+            else:
+                self.player_1_side = 'B'
+                self.curr_player = 2
+            return self.player_1_id
 
     def do_move( self, pid, uci, movetime_ms ):
         # single player mode, player 2 should NEVER be able to move
