@@ -43,10 +43,10 @@ class GameState:
     lobby: LobbyClient
     hash: str = ""
 
-    def __init__( self, table: str, servername: str, use_bot: bool, register_lobby: bool ):
+    def __init__( self, instance_url_suffix: str, servername: str, use_bot: bool, register_lobby: bool ):
         self.active_player = -1 
         self.players = []
-        self.table = table
+        self.instance_url_suffix =instance_url_suffix 
         self.servername = servername
         self.register_lobby = register_lobby
         self.max_players = int( os.getenv("GAME_MAX_PLAYERS", '2' ) )
@@ -125,14 +125,15 @@ class GameState:
         if not self.register_lobby :
             return
         human_player_slots, human_player_count = self.get_human_player_count_info()
-        self.lobby.send_state_to_lobby( human_player_slots, human_player_count, True, self.servername, "?table=" + self.table )
+        #self.lobby.send_state_to_lobby( human_player_slots, human_player_count, True, self.servername, "?table=" + self.table )
+        self.lobby.send_state_to_lobby( human_player_slots, human_player_count, True, self.servername, "?table=" + self.instance_url_suffix )
 
 
     def delete_from_lobby(self) -> None:
         if not self.register_lobby :  
             # not in lobby, so nothing to do
             return
-        self.lobby.delete_from_lobby( self.servername, "?table=" + self.table )
+        self.lobby.delete_from_lobby( self.servername, "?table=" + self.instance_url_suffix )
 
 
     def get_human_player_count_info(self) -> (int, int):

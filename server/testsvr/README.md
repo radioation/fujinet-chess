@@ -35,12 +35,14 @@ You have to provide
 3. copy to your tnfs server folder
 
 ## Lobby server 
-0. download from 
-1. use make to run??
+0. download source from [github](https://github.com/FujiNetWIFI/fujinet-lobby)
+1. Build in server directory
 ```bash
     cd server
     make
 ```
+This also runs the server.
+2. After built, you can run with `./lobbyPersist`
 
 ## Game Server
 

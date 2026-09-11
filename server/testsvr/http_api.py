@@ -63,12 +63,12 @@ def initialize_tables():
     raw_list = json.loads( tables_json )
     for table in raw_list:
         servername = table.get("servername")
-        tablename = table.get("table").lower()
+        instance_url_suffix = table.get("instance_url_suffix").lower()
         bot_count = int(table.get("bot_count"))
         register_lobby = int(table.get("register_lobby"))
-        table_obj, game_state = create_table( servername, tablename, bot_count, register_lobby )
+        table_obj, game_state = create_table( servername, instance_url_suffix, bot_count, register_lobby )
         TABLES.append(table_obj)
-        STATE_MAP[ tablename ] = game_state
+        STATE_MAP[ instance_url_suffix ] = game_state
         game_state.update_lobby()
 
 def get_state( table:str, player:str ) -> Tuple[ Optional[GameState], Callable[ [], None]]:
