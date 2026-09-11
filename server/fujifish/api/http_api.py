@@ -1,7 +1,17 @@
 import os
+import signal
+import threading
+import copy
+
+from lobby.lobby_client import GameClient, LobbyClient, GamePlayer, get_lobby
+
+import json
+
+
+
 from flask import Flask, request, Response
 
-from fujifish.api.chess_game import GameTable, ChessGame, new_game, get_game
+from fujifish.api.chess_game import GameTable, ChessGame, create_table
 
 #######################################################
 #
@@ -51,13 +61,13 @@ def initialize_tables():
     raw_list = json.loads( tables_json )
     for table in raw_list:
         servername = table.get("servername")
-        tablename = table.get("table").lower()
+        instance_url_suffix = table.get("instance_url_suffix").lower()
         bot_level = int(table.get("bot_level"))
         register_lobby = int(table.get("register_lobby"))
-        table_obj, chess_game = create_table( servername, tablename, bot_level, register_lobby )
+        table_obj, chess_game = create_table( servername, instance_url_suffix, bot_level, register_lobby )
         TABLES.append(table_obj)
-        STATE_MAP[ tablename ] =chess_game 
-        game_state.update_lobby()
+        STATE_MAP[ instance_url_suffix ] =chess_game 
+        chess_game.update_lobby()
 
 
 def get_state( table:str, player:str ) -> Tuple[ Optional[GameState], Callable[ [], None]]:

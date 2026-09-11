@@ -24,13 +24,20 @@ class GameTable:
     max_players: int = 0
 
 
-@dataclass Player:
+@dataclass 
+class Player:
     name: str
     player_id: str  
     move: str
     side: str
     is_bot: bool
-    bot_level: int
+    def __init__( self, name: str, side: str,  is_bot: bool ):
+        self.name = name 
+        self.player_id = str(uuid.uuid4())[:8].upper() # always set but ma
+        self.move = ''
+        self.side = side
+        self.is_bot = is_bot
+
 
 @dataclass
 class ChessGame:
@@ -47,10 +54,10 @@ class ChessGame:
     hash: str = ""
 
     # if bot_level is None, no bot will be added.
-    def __init__( self, table: str, servername: str, bot_level: int, register_lobby: bool ):
+    def __init__( self, instance_url_suffix: str, servername: str, bot_level: int, register_lobby: bool ):
         self.active_player = -1
         self.players = []
-        self.table = table
+        self.instance_url_suffix = instance_url_suffix
         self.servername = servername
         self.register_lobby = register_lobby
         self.max_players = 2
@@ -62,22 +69,22 @@ class ChessGame:
         else:
             # Map skill level 1-10 to Stockfish config.
             self.skill_level = max(1, min(10, bot_level))
-            if level == 10:
+            if self.skill_level == 10:
                 # Full strength
                 self.engine_config = {"UCI_LimitStrength": False}
             else:
                 elo_min, elo_max = 1320, 3190
                 step = (elo_max - elo_min) / 9  # 9 intervals (levels 1–9)
-                target_elo = int(elo_min + (level - 1) * step)
+                target_elo = int(elo_min + (self.skill_level - 1) * step)
                 self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
-            self.add_player( "BOT" + str( level ), True )
+            self.add_player( "BOT" + str( self.skill_level ), True )
 
     def add_player( self, player: str, is_bot: bool ) -> None:
         print( f'adding player {player} to array of size {len(self.players)}')
         if len(self.players) == self.max_players:
             return
 
-        new_player = Player( name = player, move = '', is_bot = is_bot );
+        new_player = Player( name = player, side = '', is_bot = is_bot );
 
     
 
@@ -110,6 +117,44 @@ class ChessGame:
 #            target_elo = int(elo_min + (level - 1) * step)
 #            self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
 #
+
+
+    def client_leave(self) -> None:
+        # not an actual game, so no logic to really check.
+        if self.client_player < 0:
+            return
+
+        del( self.players[ self.client_player ] )
+
+    def update_lobby(self) -> None:
+        if not self.register_lobby :
+            return
+        human_player_slots, human_player_count = self.get_human_player_count_info()
+        #self.lobby.send_state_to_lobby( human_player_slots, human_player_count, True, self.servername, ?table=" + self.table )
+        self.lobby.send_state_to_lobby( human_player_slots, human_player_count, True, self.servername, self.instance_url_suffix )
+
+
+    def delete_from_lobby(self) -> None:
+        if not self.register_lobby :
+            # not in lobby, so nothing to do
+            return
+        self.lobby.delete_from_lobby( self.servername, self.instance_url_suffix )
+
+
+    def get_human_player_count_info(self) -> (int, int):
+        human_available_slots = int( os.getenv( "GAME_SERVER_MAX_PLAYERS", "2" ) )
+        human_player_count = 0
+
+        for player in self.players:
+            if player.is_bot:
+                human_available_slots -= 1
+            else:
+                human_player_count += 1  # real game should check last ping from human
+
+        return human_available_slots, human_player_count
+
+
+
 
     def join_game( self, player_side = None ):
         # two player game:
