@@ -1,124 +1,105 @@
 
 import pytest
 import json
-from fujifish.api.http_api import app
-from fujifish.api.chess_game import ChessGame
 
 
-def test_newgame_SW():
-    client = app.test_client()
 
-    # create a newgame
-    resp = client.post("/newgame", data="S\nW\n")
-    assert resp.status_code == 200
-    assert len(resp.data) == 18   # plus 
-    ids = resp.data.decode("utf-8")
-    assert ids[8] == ":"
-    assert ids[:8].isalnum() == True
-    assert ids[9:-1].isalnum() == True
-
-    # check status
-    gameid =  ids[:8]
-    resp = client.get(f"/status?gid={gameid}")
-    assert resp.data.decode('utf-8') == 'TURN w:LAST -----:MVNO 0\n'
-    assert resp.status_code == 200
+@pytest.fixture(scope="module")
+def client():
+    import os
+    os.environ[ "GAME_SERVER_TABLES" ] = '[ { "servername":"Iceland", "instance_url_suffix":"Iceland", "bot_level": -1, "register_lobby": false }, { "servername":"Philippines", "instance_url_suffix":"manila", "bot_level": -1, "register_lobby": false } ]'
+    
+    from fujifish.api.http_api import app, initialize_tables
+    from fujifish.api.chess_game import ChessGame
+    initialize_tables()  # create game specified by 'GAME_SERVER_TABLES'
+    with app.test_client() as test_client:
+        yield test_client
 
 
-def test_newgame_SW10():
-    client = app.test_client()
+def test_joingame(client):
 
-    # create a newgame
-    resp = client.post("/newgame", data="S\nW\n10\n")
-    assert resp.status_code == 200
-    assert len(resp.data) == 18   # plus 
-    ids = resp.data.decode("utf-8")
-
-    assert ids[8] == ":"
-    assert ids[:8].isalnum() == True
-    assert ids[9:-1].isalnum() == True
-
-
-def test_joingame():
-    client = app.test_client()
-
-    # create a newgame
-    resp = client.post("/newgame", data="S\nW\n")
-    ids = resp.data.decode("utf-8")
-    gameid =  ids[:8]
-    playid = ids[9:-1]
 
     resp = client.post("/joingame")
+    assert resp.data.decode('utf-8') == 'invalid gid\n'
+    assert resp.status_code == 400
+
+
+    resp = client.post("/joingame?table=hastings", data="AAAAAAAA\nW\n")
+    assert resp.data.decode('utf-8') == 'table not found\n'
+    assert resp.status_code == 404
+
+    resp = client.post("/joingame?table=iceland", data=f"AAAA\n")
     assert resp.data.decode('utf-8') == 'invalid\n'
     assert resp.status_code == 400
 
+    resp = client.post("/joingame?table=iceland", data=f"radyo\nW\n")
+    ids = resp.data.decode('utf-8')
+    playid =  ids[:8]
+    side = ids[9:]
+    assert playid.strip().isalnum() == True
+    assert side == 'W'
+    assert resp.status_code == 200
 
-    resp = client.post("/joingame", data="AAAAAAAA\n")
-    assert resp.data.decode('utf-8') == 'invalid gid\n'
-    assert resp.status_code == 404
-
-    resp = client.post("/joingame", data=f"{gameid}\n")
-    assert resp.data.decode('utf-8') == 'invalid mode\n'
-    assert resp.status_code == 400
-
-    resp = client.post("/newgame", data="D\nW\n")
-    ids = resp.data.decode("utf-8")
-    gameid =  ids[:8]
-    
-    resp = client.post("/joingame", data=f"{gameid}\n")
-    assert resp.data.decode('utf-8').strip().isalnum() == True
+    resp = client.post("/joingame?table=iceland", data=f"gorm\nW\n")
+    ids = resp.data.decode('utf-8')
+    playid =  ids[:8]
+    side = ids[9:]
+    assert playid.strip().isalnum() == True
+    assert side == 'B'
     assert resp.status_code == 200
 
 
+
     
-def test_move():
-    client = app.test_client()
+def test_move_request(client):
+    
+    resp = client.post("/joingame?table=manila", data=f"shadow\nW\n")
+    ids = resp.data.decode('utf-8')
+    print(ids)
+    playid =  ids[:8]
+    side = ids[9:]
+
+    resp = client.post("/joingame?table=manila", data=f"cosmicowl\nW\n")
+    print(ids)
+
 
     # check post data
     resp = client.post("/move", data="S\nW\n")
-    assert resp.data.decode('utf-8') == "invalid format\n"
+    assert resp.data.decode('utf-8') == "invalid table\n"
     assert resp.status_code == 400
 
-    resp = client.post("/move", data="-----\nW\na\n")
-    assert resp.data.decode('utf-8') == "invalid format - g\n"
-    assert resp.status_code == 400
-
-    resp = client.post("/move", data="abcd1234\nW\na\n")
+    # bad player format
+    resp = client.post("/move?table=manila", data="-----\nW\na\n")
     assert resp.data.decode('utf-8') == "invalid format - p\n"
     assert resp.status_code == 400
 
-    resp = client.post("/move", data="abcd1234\n1234asdf\na\n")
+    # bad move format
+    resp = client.post("/move?table=manila", data="abcd1234\na\n")
     assert resp.data.decode('utf-8') == "invalid format - m\n"
     assert resp.status_code == 400
 
-    resp = client.post("/move", data="abcd1234\n1234asdf\n123456\n")
+    # bad move format
+    resp = client.post("/move?table=manila", data="1234asdf\n123456\n")
     assert resp.data.decode('utf-8') == "invalid format - m\n"
     assert resp.status_code == 400
 
-    resp = client.post("/move", data="abcd1234\n1234asdf\ne2e4\n")
-    assert resp.data.decode('utf-8') == "invalid game\n"
-    assert resp.status_code == 404
-
-    resp = client.post("/move", data="abcd1234\n1234asdf\ne2e4\naaa\n")
+    # bad time format
+    resp = client.post("/move?table=manila", data="1234asdf\ne2e4\naaa\n")
     assert resp.data.decode('utf-8') == "invalid format - t\n"
     assert resp.status_code == 400
 
-    resp = client.post("/move", data="abcd1234\n1234asdf\ne2e4\n350\n")
-    assert resp.data.decode('utf-8') == "invalid game\n"
+    # format 
+    resp = client.post("/move?table=estarcion", data="1234asdf\ne2e4\n350\n")
+    assert resp.data.decode('utf-8') == "table not found\n"
     assert resp.status_code == 404
 
-
-    # create a newgame
-    resp = client.post("/newgame", data="S\nW\n")
-    ids = resp.data.decode("utf-8")
-    gameid =  ids[:8]
-    playid = ids[9:]
-
-    resp = client.post("/move", data=f"{gameid}\n{playid}\ne2e4\n")
+    print(f'Do move for {playid}')
+    resp = client.post("/move?table=manila", data=f"{playid}\ne2e4\n")
     assert resp.status_code == 200
 
 
-def test_state():
-    client = app.test_client()
+def test_state(client):
+    
     # create a newgame
     resp = client.post("/newgame", data="D\nW\n")
     ids = resp.data.decode("utf-8")
@@ -175,8 +156,8 @@ def test_state():
 
 
 
-def test_mate():
-    client = app.test_client()
+def test_mate(client):
+
     # create a newgame
     resp = client.post("/newgame", data="D\nW\n")
     ids = resp.data.decode("utf-8")

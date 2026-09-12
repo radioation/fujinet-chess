@@ -64,7 +64,7 @@ def initialize_tables():
         servername = table.get("servername")
         instance_url_suffix = table.get("instance_url_suffix").lower()
         bot_level = int(table.get("bot_level"))
-        register_lobby = int(table.get("register_lobby"))
+        register_lobby = table.get("register_lobby")
         table_obj, chess_game = create_table( servername, instance_url_suffix, bot_level, register_lobby )
         TABLES.append(table_obj)
         STATE_MAP[ instance_url_suffix ] =chess_game 
@@ -162,14 +162,14 @@ def http_joingame():
     print ("BODY: " + body)
     print ("table: " + tbl)
     lines = [ln.strip() for ln in body.splitlines() if ln.strip() != ""]
-    if len(lines) > 0 :
+    if len(lines) > 1 :
         #game = get_game(gid)
         game, unlock = get_game(tbl)
         try:
             if game is not None:
                 # try to join
                 playerid,side = game.join_game(lines[0], lines[1] )
-                return Response( playerid + "\n" + side +"\n", mimetype="text/plain")
+                return Response( playerid + ":" + side , mimetype="text/plain")
         finally:
             unlock()
         return Response("table not found\n", mimetype="text/plain", status=404)

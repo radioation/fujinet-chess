@@ -33,7 +33,7 @@ tar -xvf stockfish-ubuntu-x86-64-avx2.tar
 4. Run server with 
 
 ```bash
-ENGINE_PATH = "/path/to/stockfish/stockfish-ubuntu-x86-64-avx2"
+export ENGINE_PATH = "/path/to/stockfish/stockfish-ubuntu-x86-64-avx2"
 python3 -m fujifish.run
 ```
 

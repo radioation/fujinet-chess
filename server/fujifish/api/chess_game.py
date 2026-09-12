@@ -70,7 +70,9 @@ class ChessGame:
         self.max_players = 2
         self.curr_player = 0    # 0 : no player yet
         self.moves = []
-        self.lobby = get_lobby()
+        self.lobby = None
+        if register_lobby is True:
+            self.lobby = get_lobby()
         if bot_level < 1:
             print("NO SYNTH")
             self.bot_level = 0 
