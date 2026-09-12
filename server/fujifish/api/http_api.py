@@ -70,23 +70,36 @@ def initialize_tables():
         chess_game.update_lobby()
 
 
-def get_state( table:str, player:str ) -> Tuple[ Optional[GameState], Callable[ [], None]]:
+def get_state( table:str ) -> Tuple[ Optional[ChessGame], Callable[ [], None]]:
     tbl = table.lower()
-    plyr = ""
-    if len(player) > 0:
-        plyr = player.lower()
+    #plyr = ""
+    #if len(player) > 0:
+    #    plyr = player.lower()
 
     unlock_fcn = table_mutex.Lock( tbl )
-
+    state = None
     tmp_state = STATE_MAP.get( tbl )
     if tmp_state is not None:
         state = copy.deepcopy( tmp_state )
-        state.set_client_player_by_name( plyr )
+        #state.set_client_player_by_name( plyr )
 
     return state, unlock_fcn
 
+def get_game( table:str ) -> Tuple[ Optional[ChessGame], Callable[ [], None]]:
+    tbl = table.lower()
+    #plyr = ""
+    #if len(player) > 0:
+    #    plyr = player.lower()
 
-def save_state( state: GameState ):
+    unlock_fcn = table_mutex.Lock( tbl )
+    state = STATE_MAP.get( tbl )
+    #if tmp_state is not None:
+    #    state = copy.deepcopy( tmp_state )
+    #    #state.set_client_player_by_name( plyr )
+
+    return state, unlock_fcn
+
+def save_state( state: ChessGame ):
     STATE_MAP[ state.table] = state
 
 
@@ -142,19 +155,25 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 @app.post("/joingame")
 def http_joingame():
     body = request.get_data(as_text=True) or ""
+    tbl = request.args.get("table")
+    if tbl is None:
+        return Response("invalid gid\n", mimetype="text/plain", status=404)
     print ("BODY: " + body)
+    print ("table: " + tbl)
     lines = [ln.strip() for ln in body.splitlines() if ln.strip() != ""]
     if len(lines) > 0 :
-        gid = lines[0]
-        game = get_game(gid)
-        if game is None:
-            return Response("invalid gid\n", mimetype="text/plain", status=404)
-        else:
-            if game.mode == 'D':
-                game.join_game()
-                return Response( game.player_2_id + "\n" , mimetype="text/plain", status=200)
-            else:
-                return Response("invalid mode\n", mimetype="text/plain", status=400)
+        #game = get_game(gid)
+        game, unlock = get_game(tbl)
+        try:
+            if game is not None:
+                # try to join
+                playerid = game.join_game(lines[0], lines[1] )
+                return Response( playerid + "\n", mimetype="text/plain")
+        finally:
+            unlock()
+        return Response("table not found\n", mimetype="text/plain", status=404)
+
+            
     else:
         return Response("invalid\n", mimetype="text/plain", status=400)
 

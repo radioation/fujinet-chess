@@ -47,8 +47,26 @@ ENGINE_PATH = "/path/to/stockfish/stockfish-ubuntu-x86-64-avx2"
 pytest test_http_api.y
 pytest test_tcp_api.y
 ```
+# NEW INTERFACE
 
-# Trying the interface 
+join
+
+```bash
+  curl -X POST "http://localhost:5364/joingame?table=bangkok" -d $'radyo\nW\n'
+  curl -X POST "http://localhost:5364/joingame?table=manila" -d $'radyo\nW\n'
+  curl -X POST "http://localhost:5364/joingame?table=hastings" -d $'radyo\nW\n'
+  curl -X POST "http://localhost:5364/joingame?table=hastings" -d $'gorm\nW\n'
+```
+
+legal move
+```bash
+```
+illegal  move
+```bash
+```
+
+
+# OLD INTERFACE
 
 HTTP with CURL
 ```bash

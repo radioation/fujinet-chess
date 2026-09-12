@@ -49,7 +49,7 @@ class ChessGame:
     register_lobby: bool
     max_players: int
     lobby: lobbyClient
-    skill_level: int
+    bot_level: int
     engine_config: str
     hash: str = ""
 
@@ -65,30 +65,32 @@ class ChessGame:
         self.lobby = get_lobby()
         if bot_level < 1:
             print("NO SYNTH")
-            self.skill_level = ""
+            self.bot_level = 0 
             self.engine_config = ""
         else:
             # Map skill level 1-10 to Stockfish config.
-            self.skill_level = max(1, min(10, bot_level))
-            if self.skill_level == 10:
+            self.bot_level = max(1, min(10, bot_level))
+            if self.bot_level == 10:
                 # Full strength
                 self.engine_config = {"UCI_LimitStrength": False}
             else:
                 elo_min, elo_max = 1320, 3190
                 step = (elo_max - elo_min) / 9  # 9 intervals (levels 1–9)
-                target_elo = int(elo_min + (self.skill_level - 1) * step)
+                target_elo = int(elo_min + (self.bot_level - 1) * step)
                 self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
             print(f'>> Got bot level: {bot_level} use {self.engine_config}')
-            self.add_player( "BOT" + str( self.skill_level ), True )
+            self.add_player( "BOT" + str( self.bot_level ), "", True )
 
-    def add_player( self, player: str, is_bot: bool ) -> None:
-        if len(self.players) == self.max_players:
-            print( f'>> at player max {len(self.players)}')
-            return
-        print( f'>> Adding player {player} to array of size {len(self.players)}')
-
-        new_player = Player( name = player, side = '', is_bot = is_bot );
+    def add_player( self, player: str, side: str, is_bot: bool ) -> int:
+        num_players = len(self.players) 
+        if num_players == self.max_players:
+            print( f'>> at player max {num_players}')
+            return -1
+        print( f'>> Adding player {player} to array of size {num_players}')
+        new_player = Player( name = player, side = side, is_bot = is_bot );
         self.players.append(new_player)
+        print( f'>>  new size {len(self.players)}')
+        return num_players 
 
 
     def set_client_player_by_name( self, player:str ) -> None:
@@ -105,7 +107,7 @@ class ChessGame:
         self.client_player = index
 
         if self.client_player < 0 and len( self.players ) < self.max_players :
-            self.add_player( player, False )
+            self.add_player( player, '', False )
             self.client_player = len( self.players) - 1
             self.update_lobby()    
 
@@ -180,40 +182,46 @@ class ChessGame:
 
 
 
-    def join_game( self, player_side = None ):
+    def join_game( self, player:str, player_side:str = None ) -> str:
         # two player game:
-        if self.mode == 'D':
-            # check if player 1 is set yet.
-            if self.player_1_side == None:
-                # not yet set, so joining player is #1
-
-                if player_side == None:  # Didn't pick, assign white.
-                    self.player_1_side = 'W'
-                    self.curr_player = 1
-                else:
-                    # they get to pick their side
-                    self.player_1_side = player_side
-                    if player_side == 'W':
-                        self_curr_player = 1
-                    else:
-                        self_curr_player = 2
-                return self.player_1_id
-            else:
-                # a player is already present, player 2 will take what they get and like it.
-                if self.player_1_side == 'W':
-                    self.player_2_side == 'B'
-                else:
-                    self.player_2_side == 'W'
-                return self.player_2_id
-        else:  # S
-            if player_side == None:
-                self.player_1_side = 'W'
-                self.curr_player = 1
-            else:
-                self.player_1_side = 'B'
-                self.curr_player = 2
-            return self.player_1_id
-
+        print(f'JOIN GAME curr num players {len(self.players)}')
+        if self.bot_level == 0: # no bot set.
+            index = self.add_player( player, player_side, False )
+            print(f'JOIN GAME index: {index}')
+            if index > 0:
+                player_id = self.players[index].player_id
+                return player_id
+            return ""
+            #if self.player_1_side == None:
+            #    # not yet set, so joining player is #1
+            
+            #    if player_side == None:  # Didn't pick, assign white.
+            #        self.player_1_side = 'W'
+            #        self.curr_player = 1
+            #    else:
+            #        # they get to pick their side
+            #        self.player_1_side = player_side
+            #        if player_side == 'W':
+            #            self_curr_player = 1
+            #        else:
+            #            self_curr_player = 2
+            #    return self.player_1_id
+            #else:
+            #    # a player is already present, player 2 will take what they get and like it.
+            #    if self.player_1_side == 'W':
+            #        self.player_2_side == 'B'
+            #    else:
+            #        self.player_2_side == 'W'
+            #    return self.player_2_id
+        #else:  # S
+            #if player_side == None:
+            #    self.player_1_side = 'W'
+            #    self.curr_player = 1
+            #else:
+            #    self.player_1_side = 'B'
+            #    self.curr_player = 2
+            #return self.player_1_id
+        return "hah"
     def do_move( self, pid, uci, movetime_ms ):
         # single player mode, player 2 should NEVER be able to move
         if self.mode == 'S' and pid == self.player_2_id:
@@ -278,7 +286,7 @@ class ChessGame:
             return ( { "valid": True, "message":"legal move", "engine_move":best } )
 
     def settings_str(self):
-        return f"mode {self.mode}:p1side {self.player_1_side}:level {self.skill_level}:curr_player {self.curr_player}\n"
+        return f"mode {self.mode}:p1side {self.player_1_side}:level {self.bot_level}:curr_player {self.curr_player}\n"
 
     def state_line(self):
         if self.mode == 'D' and self.player_2_id == "NA":
