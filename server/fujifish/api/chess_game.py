@@ -261,10 +261,10 @@ class ChessGame:
         #if self.mode == 'D' and self.player_2_id == 'NA':
         #    return ( { "valid": False, "message":"game not started" } )
         #
-        #if self.curr_player == 1 and pid != self.player_1_id:
-        #    return ( { "valid": False, "message":"player 1 turn" } )
-        #if self.curr_player == 2 and pid != self.player_2_id:
-        #    return ( { "valid": False, "message":"player 2 turn" } )
+        if self.current_player == 1 and pid != self.player_1.player_id:
+            return ( { "valid": False, "message":"player 1 turn" } )
+        if self.current_player == 2 and pid != self.player_2.player_id:
+            return ( { "valid": False, "message":"player 2 turn" } )
         
         try:
              mv = chess.Move.from_uci(uci)
