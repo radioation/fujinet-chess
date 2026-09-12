@@ -158,7 +158,7 @@ def http_joingame():
     body = request.get_data(as_text=True) or ""
     tbl = request.args.get("table")
     if tbl is None:
-        return Response("invalid gid\n", mimetype="text/plain", status=404)
+        return Response("invalid gid\n", mimetype="text/plain", status=400)
     print ("BODY: " + body)
     print ("table: " + tbl)
     lines = [ln.strip() for ln in body.splitlines() if ln.strip() != ""]
@@ -183,7 +183,6 @@ def http_joingame():
 def http_move():
     """
     Body format (plain text, LF line endings):
-        <game_id>\n
         <uci_move>\n
         [<movetime_ms>]\n        # optional, default 300
     Returns:
@@ -192,42 +191,48 @@ def http_move():
         - "<bestmove>\n"             if valid, give best move from stockfish (single player will move)
     """
     body = request.get_data(as_text=True) or ""
+    tbl = request.args.get("table")
+    if tbl is None:
+        return Response("invalid table\n", mimetype="text/plain", status=400)
 
-    print ("BODY: " + body)
-    lines = [ln.strip() for ln in body.splitlines() if ln.strip() != ""]
-
-    # Not enough info (we need both ids and the UCI move )
-    if len(lines) < 3:
-        return Response("invalid format\n", mimetype="text/plain", status=400)
-   
-    gid, pid,  uci_move = lines[0], lines[1], lines[2].lower()
-    if not gid.isalnum() or ( gid.isalnum() and  len(gid) != 8 ):
-        return Response("invalid format - g\n", mimetype="text/plain", status=400)
-    if not pid.isalnum() or ( pid.isalnum() and  len(pid) != 8 ):
-        return Response("invalid format - p\n", mimetype="text/plain", status=400)
-    if not uci_move.isalnum() or len(uci_move) > 5 or len(uci_move) < 4:
-        return Response("invalid format - m\n", mimetype="text/plain", status=400)
-
-    movetime_ms = 300
-    if len(lines) >= 4 :
-        if lines[3].isdigit():
-            movetime_ms = int(lines[3])
-        else:
-            return Response("invalid format - t\n", mimetype="text/plain", status=400)
-
-    game = get_game(gid)
+    game, unlock = get_game(tbl)
     if game is None:
-        return Response("invalid game\n", mimetype="text/plain", status=404)
+        return Response("table not found\n", mimetype="text/plain", status=404)
 
-    move_result = game.do_move( pid, uci_move, movetime_ms)
-    if move_result['valid'] == True:
-        #if 'engine_move' in move_result:
-        #    return Response( move_result['engine_move'], mimetype="text/plain", status = 200)
-        #else:
-        return Response( move_result['message'], mimetype="text/plain", status = 200)
-    else:
-        return Response(move_result['message'], mimetype="text/plain", status=400)
-
+    try:
+        print ("BODY: " + body)
+        print ("table: " + tbl)
+        lines = [ln.strip() for ln in body.splitlines() if ln.strip() != ""]
+ 
+        # need both player and the UCI move )
+        if len(lines) < 2:
+            return Response("invalid format\n", mimetype="text/plain", status=400)
+       
+        pid,  uci_move = lines[0], lines[1].lower()
+ 
+        if not pid.isalnum() or ( pid.isalnum() and  len(pid) != 8 ):
+            return Response("invalid format - p\n", mimetype="text/plain", status=400)
+        if not uci_move.isalnum() or len(uci_move) > 5 or len(uci_move) < 4:
+            return Response("invalid format - m\n", mimetype="text/plain", status=400)
+ 
+        movetime_ms = 300
+        if len(lines) >= 3 :
+            if lines[2].isdigit():
+                movetime_ms = int(lines[3])
+            else:
+                return Response("invalid format - t\n", mimetype="text/plain", status=400)
+ 
+ 
+        move_result = game.do_move( pid, uci_move, movetime_ms)
+        if move_result['valid'] == True:
+            #if 'engine_move' in move_result:
+            #    return Response( move_result['engine_move'], mimetype="text/plain", status = 200)
+            #else:
+            return Response( move_result['message'], mimetype="text/plain", status = 200)
+        else:
+            return Response(move_result['message'], mimetype="text/plain", status=400)
+    finally:
+        unlock()
 
 
 @app.get("/board")

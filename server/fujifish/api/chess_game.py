@@ -43,7 +43,9 @@ class Player:
 class ChessGame:
     active_player: int
 
-    players: List[Player]
+    #players: List[Player] overkill, only two players ever
+    player_1: Player
+    player_2: Player
     client_player: int
     table: str
     servername: str
@@ -52,23 +54,28 @@ class ChessGame:
     lobby: lobbyClient
     bot_level: int
     engine_config: str
+    is_single_player: bool
     hash: str = ""
 
     # if bot_level is None, no bot will be added.
     def __init__( self, instance_url_suffix: str, servername: str, bot_level: int, register_lobby: bool ):
         self.active_player = -1
         self.board = chess.Board()      
-        self.players = []
+        self.engine_moves = []          # list of chess engine moves
+        self.player_1 = None
+        self.player_2 = None
         self.instance_url_suffix = instance_url_suffix
         self.servername = servername
         self.register_lobby = register_lobby
         self.max_players = 2
+        self.curr_player = 0    # 0 : no player yet
         self.moves = []
         self.lobby = get_lobby()
         if bot_level < 1:
             print("NO SYNTH")
             self.bot_level = 0 
             self.engine_config = ""
+            self.is_single_player = False
         else:
             # Map skill level 1-10 to Stockfish config.
             self.bot_level = max(1, min(10, bot_level))
@@ -81,24 +88,41 @@ class ChessGame:
                 target_elo = int(elo_min + (self.bot_level - 1) * step)
                 self.engine_config ={"UCI_LimitStrength": True, "UCI_Elo": target_elo}
             print(f'>> Got bot level: {bot_level} use {self.engine_config}')
+            self.is_single_player = True
             self.add_player( "BOT" + str( self.bot_level ), "", True )
 
-    def add_player( self, player: str, side: str, is_bot: bool ) -> int:
-        num_players = len(self.players) 
-        if num_players == self.max_players:
-            print( f'>> at player max {num_players}')
-            return -1
-        print( f'>> Adding player {player} to array of size {num_players}')
-        use_side = side
-        if num_players == 1:
-            if self.players[0].side == 'W':
-                use_side = 'B'
-            else:
-                use_side = 'W'
-        new_player = Player( name = player, side = use_side, is_bot = is_bot );
-        self.players.append(new_player)
-        print( f'>>  new size {len(self.players)}')
-        return num_players 
+    def add_player( self, player: str, side: str, is_bot: bool ) -> ( str, str ) :
+        if self.player_1 is not None and self.player_2 is not None: 
+            print( f'>> at player max')
+            return ("", "")
+
+        print( f'>> Adding player {player} ')
+        if self.player_1 is None:
+            self.player_1 = Player( name = player, side = side, is_bot = is_bot );
+            return( self.player_1.player_id, self.player_1.side )
+        else: 
+            use_side = 'B'
+            if self.player_1.is_bot:
+                p2_side = side
+                # human chooses side, not bot
+                if side == 'W':
+                    self.player_1.side = 'B'
+                    self.current_player = 2
+                else:
+                    self.player_1.side = 'W'
+                    # TODO: have bot do opening move here?
+                    self.current_player = 2
+            else:  # not a bot, first player  had choice
+                if self.player_1.side == 'B':
+                    use_side = 'W'
+                    self.current_player = 2
+                else:
+                    self.current_player = 1
+                
+            self.player_2 = Player( name = player, side = use_side, is_bot = is_bot );
+            return( self.player_2.player_id, self.player_2.side )
+
+        return ("", "")
 
 
     def set_client_player_by_name( self, player:str ) -> None:
@@ -177,13 +201,13 @@ class ChessGame:
         human_available_slots = int( os.getenv( "GAME_SERVER_MAX_PLAYERS", "2" ) )
         print(f'>>   human_available_slots {human_available_slots}')
         human_player_count = 0
+        if self.is_single_player:
+            human_available_slots -= 1
+        if self.player_1 is not None and self.player_1.is_bot == False :
+            human_player_count +=1
+        if self.player_2 is not None and self.player_2.is_bot == False :
+            human_player_count +=1
 
-        print(f'>>   self.players {self.players}')
-        for player in self.players:
-            if player.is_bot:
-                human_available_slots -= 1
-            else:
-                human_player_count += 1  # real game should check last ping from human
 
         return human_available_slots, human_player_count
 
@@ -192,15 +216,9 @@ class ChessGame:
 
     def join_game( self, player:str, player_side:str = None ) -> (str,str):
         # two player game:
-        print(f'JOIN GAME curr num players {len(self.players)}')
         if self.bot_level == 0: # no bot set.
-            index = self.add_player( player, player_side, False )
-            print(f'JOIN GAME index: {index}')
-            if index >= 0 and index < MAX_PLAYERS:
-                player_id = self.players[index].player_id
-                side = self.players[index].side
-                return ( player_id, side )
-            return ("","")
+            (player_id, side ) = self.add_player( player, player_side, False )
+            return ( player_id, side )
             #if self.player_1_side == None:
             #    # not yet set, so joining player is #1
             
@@ -231,20 +249,21 @@ class ChessGame:
             #    self.curr_player = 2
             #return self.player_1_id
         return ("","")
-    def do_move( self, pid, uci, movetime_ms ):
-        # single player mode, player 2 should NEVER be able to move
-        if self.mode == 'S' and pid == self.player_2_id:
-            return ( { "valid": False, "message":"player 1 turn" } )
 
-        # single player mode before p2 joins, don't allow
-        if self.mode == 'D' and self.player_2_id == 'NA':
-            return ( { "valid": False, "message":"game not started" } )
+    def do_move( self, pid, uci, movetime_ms ):
+        ## single player mode, player 2 should NEVER be able to move
+        #if self.mode == 'S' and pid == self.player_2_id:
+        #    return ( { "valid": False, "message":"player 1 turn" } )
+
+        ## single player mode before p2 joins, don't allow
+        #if self.mode == 'D' and self.player_2_id == 'NA':
+        #    return ( { "valid": False, "message":"game not started" } )
+        #
+        #if self.curr_player == 1 and pid != self.player_1_id:
+        #    return ( { "valid": False, "message":"player 1 turn" } )
+        #if self.curr_player == 2 and pid != self.player_2_id:
+        #    return ( { "valid": False, "message":"player 2 turn" } )
         
-        if self.curr_player == 1 and pid != self.player_1_id:
-            return ( { "valid": False, "message":"player 1 turn" } )
-        if self.curr_player == 2 and pid != self.player_2_id:
-            return ( { "valid": False, "message":"player 2 turn" } )
-            
         try:
              mv = chess.Move.from_uci(uci)
         except ValueError:
@@ -266,7 +285,7 @@ class ChessGame:
             
         # get reply from stockfish.
         with chess.engine.SimpleEngine.popen_uci(os.environ['ENGINE_PATH']) as eng:
-            if self.mode == 'S':
+            if self.is_single_player == True:
                 # potentially make dumb moves for single player.
                 print( self.engine_config )
                 eng.configure( self.engine_config )
@@ -286,16 +305,16 @@ class ChessGame:
             best = res.move.uci()
             print("BEST: " +best)
 
-            if self.mode == 'D':
-                self.curr_player = 2 if self.curr_player == 1 else 1
+            if self.is_single_player == False:
+                self.current_player = 2 if self.current_player == 1 else 1
                 self.engine_moves.append(res.move)
-            if self.mode == 'S':
+            else:
                 self.board.push(res.move)
             
             return ( { "valid": True, "message":"legal move", "engine_move":best } )
 
     def settings_str(self):
-        return f"mode {self.mode}:p1side {self.player_1_side}:level {self.bot_level}:curr_player {self.curr_player}\n"
+        return f"mode {self.mode}:p1side {self.player_1_side}:level {self.bot_level}:current_player {self.current_player}\n"
 
     def state_line(self):
         #if self.mode == 'D' and self.player_2_id == "NA":

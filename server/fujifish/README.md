@@ -65,7 +65,9 @@ curl -X GET "http://localhost:5364/status?table=hastings"
 
 legal move
 ```bash
-curl -X POST "http://localhost:5364/move?table=hastings" -d $'PLAYERHASH\ne2e4\n'
+curl -X POST "http://localhost:5364/move?table=hastings" -d $'PLAYER1ID\ne2e4\n'
+curl -X POST "http://localhost:5364/move?table=hastings" -d $'PLAYER2ID\ne5e7\n'
+curl -X POST "http://localhost:5364/move?table=hastings" -d $'PLAYER1ID\nc2d4\n'
 ```
 illegal  move
 ```bash
