@@ -3,6 +3,7 @@ import signal
 import threading
 import copy
 
+
 from lobby.lobby_client import GameClient, LobbyClient, GamePlayer, get_lobby
 
 import json
@@ -70,7 +71,7 @@ def initialize_tables():
         chess_game.update_lobby()
 
 
-def get_state( table:str ) -> Tuple[ Optional[ChessGame], Callable[ [], None]]:
+def get_state( table:str ) -> Tuple[ Optional[ChessGame] ]:
     tbl = table.lower()
     #plyr = ""
     #if len(player) > 0:
@@ -82,8 +83,8 @@ def get_state( table:str ) -> Tuple[ Optional[ChessGame], Callable[ [], None]]:
     if tmp_state is not None:
         state = copy.deepcopy( tmp_state )
         #state.set_client_player_by_name( plyr )
-
-    return state, unlock_fcn
+    unlock_fcn()
+    return state
 
 def get_game( table:str ) -> Tuple[ Optional[ChessGame], Callable[ [], None]]:
     tbl = table.lower()
@@ -167,8 +168,8 @@ def http_joingame():
         try:
             if game is not None:
                 # try to join
-                playerid = game.join_game(lines[0], lines[1] )
-                return Response( playerid + "\n", mimetype="text/plain")
+                playerid,side = game.join_game(lines[0], lines[1] )
+                return Response( playerid + "\n" + side +"\n", mimetype="text/plain")
         finally:
             unlock()
         return Response("table not found\n", mimetype="text/plain", status=404)
@@ -231,8 +232,9 @@ def http_move():
 
 @app.get("/board")
 def http_board():
-    gid = request.args.get('gid')
-    game = get_game(gid)
+    table = request.args.get('table')
+    if not table: return Response("ERR missing table\n", mimetype="text/plain", status = 400 )
+    game = get_state(table)
     if not game: return Response("ERR no game\n", mimetype="text/plain", status = 404 )
 
     return Response(str(game.board) + "\n", mimetype="text/plain")
@@ -240,10 +242,15 @@ def http_board():
 
 @app.get("/status")
 def http_status():
-    gid = request.args.get('gid')
-    game = get_game(gid)
+    table = request.args.get('table')
+    print(" GOT TABLE " + table )
+    if not table: return Response("ERR missing table\n", mimetype="text/plain", status = 400 )
+    game = get_state(table)
+    print(" GOT GAME " )
     if not game: return Response("ERR no game\n", mimetype="text/plain", status = 404 )
+
     print( game.state_line() )
+
     return Response(str(game.state_line()) + "\n", mimetype="text/plain")
 
 

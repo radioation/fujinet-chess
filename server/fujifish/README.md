@@ -58,8 +58,14 @@ join
   curl -X POST "http://localhost:5364/joingame?table=hastings" -d $'gorm\nW\n'
 ```
 
+```bash
+curl -X GET "http://localhost:5364/board?table=hastings"
+curl -X GET "http://localhost:5364/status?table=hastings"
+```
+
 legal move
 ```bash
+curl -X POST "http://localhost:5364/move?table=hastings" -d $'PLAYERHASH\ne2e4\n'
 ```
 illegal  move
 ```bash

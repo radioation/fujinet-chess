@@ -42,6 +42,7 @@ class Player:
 @dataclass
 class ChessGame:
     active_player: int
+
     players: List[Player]
     client_player: int
     table: str
@@ -56,6 +57,7 @@ class ChessGame:
     # if bot_level is None, no bot will be added.
     def __init__( self, instance_url_suffix: str, servername: str, bot_level: int, register_lobby: bool ):
         self.active_player = -1
+        self.board = chess.Board()      
         self.players = []
         self.instance_url_suffix = instance_url_suffix
         self.servername = servername
@@ -87,7 +89,13 @@ class ChessGame:
             print( f'>> at player max {num_players}')
             return -1
         print( f'>> Adding player {player} to array of size {num_players}')
-        new_player = Player( name = player, side = side, is_bot = is_bot );
+        use_side = side
+        if num_players == 1:
+            if self.players[0].side == 'W':
+                use_side = 'B'
+            else:
+                use_side = 'W'
+        new_player = Player( name = player, side = use_side, is_bot = is_bot );
         self.players.append(new_player)
         print( f'>>  new size {len(self.players)}')
         return num_players 
@@ -182,16 +190,17 @@ class ChessGame:
 
 
 
-    def join_game( self, player:str, player_side:str = None ) -> str:
+    def join_game( self, player:str, player_side:str = None ) -> (str,str):
         # two player game:
         print(f'JOIN GAME curr num players {len(self.players)}')
         if self.bot_level == 0: # no bot set.
             index = self.add_player( player, player_side, False )
             print(f'JOIN GAME index: {index}')
-            if index > 0:
+            if index >= 0 and index < MAX_PLAYERS:
                 player_id = self.players[index].player_id
-                return player_id
-            return ""
+                side = self.players[index].side
+                return ( player_id, side )
+            return ("","")
             #if self.player_1_side == None:
             #    # not yet set, so joining player is #1
             
@@ -221,7 +230,7 @@ class ChessGame:
             #    self.player_1_side = 'B'
             #    self.curr_player = 2
             #return self.player_1_id
-        return "hah"
+        return ("","")
     def do_move( self, pid, uci, movetime_ms ):
         # single player mode, player 2 should NEVER be able to move
         if self.mode == 'S' and pid == self.player_2_id:
@@ -289,8 +298,8 @@ class ChessGame:
         return f"mode {self.mode}:p1side {self.player_1_side}:level {self.bot_level}:curr_player {self.curr_player}\n"
 
     def state_line(self):
-        if self.mode == 'D' and self.player_2_id == "NA":
-            return f"TURN -:LAST -----:MVNO 0"
+        #if self.mode == 'D' and self.player_2_id == "NA":
+        #    return f"TURN -:LAST -----:MVNO 0"
         if self.board.outcome() == None:
             return f"TURN {'w' if self.board.turn else 'b'}:LAST {self.board.move_stack[-1] if self.board.move_stack else '-----'}:MVNO {len(self.board.move_stack)}"
         return f"OVER {self.board.outcome().result()} {self.board.outcome().termination.value}:TURN {'w' if self.board.turn else 'b'}:LAST {self.board.move_stack[-1] if self.board.move_stack else '-----'}:MVNO {len(self.board.move_stack)}"
