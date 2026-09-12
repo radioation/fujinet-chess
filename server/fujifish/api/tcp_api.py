@@ -1,6 +1,7 @@
 # tcp_protocol.py
 import socketserver, threading
-from fujifish.api.chess_game import new_game, get_game, get_two_player_games
+
+from fujifish.api.chess_game import GameTable, ChessGame, create_table
 import re
 
 
@@ -21,62 +22,53 @@ class TcpChessHandler(socketserver.StreamRequestHandler):
 
     def dispatch(self, line: str) -> str:
         try:
-            if line.startswith("N:"):
-                mode = 'S'
-                player_1_side = 'W'
-                level = 3
-                parts = line.split(":")
-                if len(parts) > 1 :
-                    mode = parts[1].strip()
-                if len(parts) > 2 :
-                    player_1_side = parts[2].strip()
-                if len(parts) > 3 :
-                    level = int(parts[3].strip())
-
-                g = new_game(mode, player_1_side, level )
-
-                return f"ACK {g.id}:{g.player_1_id}\n"
-            elif line.startswith("J:"):
+            if line.startswith("J:"):
                 parts = line.split(":")
                 if len(parts) < 2:
                     return "ERR invalid\n"
                 gid = parts[1]
                 if len(gid) == 0:
                     return "ERR invalid\n"
-                game = get_game(gid)
-                if game is None: 
-                    return "ERR invalid game id\n"
-                if game.mode == 'D':
-                    game.join_game()
-                    return f"ACK {game.player_2_id}\n"
-                else:
-                    return "ERR invalid mode\n"
+                game, unlock = get_game(gid)
+                try:
+                    if game is None: 
+                        return "ERR invalid game id\n"
+                    if game.mode == 'D':
+                        game.join_game()
+                        return f"ACK {game.player_2_id}\n"
+                    else:
+                        return "ERR invalid mode\n"
+                finally:
+                    unlock()
             elif line.startswith("M:"):
                 parts = line.split(":")
                 if len(parts) < 4: return "ERR invalid format\n"
 
                 gid, pid, uci_move = parts[1], parts[2], parts[3]
-                if not gid.isalnum() or ( gid.isalnum() and  len(gid) != 8 ):
+                if not gid.isalnum() :
                     return "ERR invalid format - g\n"
                 if not pid.isalnum() or ( pid.isalnum() and  len(pid) != 8 ):
                     return "ERR invalid format - p\n"
                 if not uci_move.isalnum() or len(uci_move) > 5 or len(uci_move) < 4:
                     return "ERR invalid format - m\n"
 
-                game = get_game(gid)
-                if game is None:
-                    return "ERR invalid game\n"
-                movetime_ts = 300
-                move_result = game.do_move( pid, uci_move, movetime_ts)
-                print( move_result )
-                if move_result['valid'] == True:
-                    #if 'engine_move' in move_result:
-                    #    res = "ACK " + move_result['engine_move']
-                    #else:
-                    res = "ACK " + move_result['message']
-                else:
-                    res = "ERR " + move_result['message']
-                return res  
+                game,unlock = get_game(gid)
+                try:
+                    if game is None:
+                        return "ERR invalid game\n"
+                    movetime_ts = 300
+                    move_result = game.do_move( pid, uci_move, movetime_ts)
+                    print( move_result )
+                    if move_result['valid'] == True:
+                        #if 'engine_move' in move_result:
+                        #    res = "ACK " + move_result['engine_move']
+                        #else:
+                        res = "ACK " + move_result['message']
+                    else:
+                        res = "ERR " + move_result['message']
+                    return res  
+                finally:
+                    unlock()
             elif line.startswith("B:"):
                 gid = line.split(":",1)[1]
                 game = get_game(gid)

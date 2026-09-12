@@ -5,24 +5,26 @@ from dotenv import load_dotenv
 import threading, socketserver
 
 from fujifish.api.http_api import app, initialize_tables
-#from fujifish.api.tcp_api import TcpChessHandler
+from fujifish.api.tcp_api import TcpChessHandler
 
 # don't lobby yet.
 from lobby.lobby_client import init_lobby
 
 
-#tcp_server = None
-#
-#def start_tcp():
-#    global tcp_server
-#    
-#
-#def shutdown( signum, frame ):
-#    if tcp_server:
-#        tcp_server.shutdown()
-#        tcp_server.server_close()
-#    sys.exit(0)
-#
+tcp_server = None
+
+def start_tcp():
+    global tcp_server
+    tcp_server = socketserver.ThreadingTCPServer(("0.0.0.0", 55558), TcpChessHandler)
+    threading.Thread(target=tcp_server.serve_forever, daemon=True).start()
+    print("TCP listening on :55558")
+
+def shutdown( signum, frame ):
+    if tcp_server:
+        tcp_server.shutdown()
+        tcp_server.server_close()
+    sys.exit(0)
+
 if __name__ == "__main__":
 
     # get environment from .env files
@@ -31,11 +33,12 @@ if __name__ == "__main__":
     server_host = os.getenv('SERVER_HOST', "0.0.0.0")
     server_port = int(os.getenv('SERVER_PORT', 5364))
 
-#    start_tcp()
 
     lobby_endpoint = os.getenv('LOBBY_ENDPOINT_UPSERT')
     init_lobby( lobby_endpoint )
     initialize_tables()
+
+    start_tcp()
 
     app.run(host=server_host, port=server_port)
 

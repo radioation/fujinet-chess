@@ -74,6 +74,10 @@ illegal  move
 ```
 
 
+TCP with telnet
+```bash
+
+
 # OLD INTERFACE
 
 HTTP with CURL
