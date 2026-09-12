@@ -76,7 +76,12 @@ illegal  move
 
 TCP with telnet
 ```bash
-
+$ telnet 127.0.0.1 55558
+Trying 127.0.0.1...
+Connected to 127.0.0.1.
+Escape character is '^]'.
+HELO
+```
 
 # OLD INTERFACE
 

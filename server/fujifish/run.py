@@ -4,7 +4,8 @@ from dotenv import load_dotenv
 
 import threading, socketserver
 
-from fujifish.api.http_api import app, initialize_tables
+from fujifish.api.chess_game import initialize_tables
+from fujifish.api.http_api import app 
 from fujifish.api.tcp_api import TcpChessHandler
 
 # don't lobby yet.

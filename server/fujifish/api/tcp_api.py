@@ -1,7 +1,7 @@
 # tcp_protocol.py
 import socketserver, threading
 
-from fujifish.api.chess_game import GameTable, ChessGame, create_table
+from fujifish.api.chess_game import GameTable, ChessGame, create_table, get_game, get_state 
 import re
 
 
@@ -24,18 +24,17 @@ class TcpChessHandler(socketserver.StreamRequestHandler):
         try:
             if line.startswith("J:"):
                 parts = line.split(":")
-                if len(parts) < 2:
+                if len(parts) < 4:
                     return "ERR invalid\n"
                 gid = parts[1]
                 if len(gid) == 0:
                     return "ERR invalid\n"
                 game, unlock = get_game(gid)
                 try:
-                    if game is None: 
-                        return "ERR invalid game id\n"
-                    if game.mode == 'D':
-                        game.join_game()
-                        return f"ACK {game.player_2_id}\n"
+                    if game is not None: 
+
+                        ( player_id, side ) = game.join_game(parts[2], parts[3])
+                        return f"ACK {player_id} : {side}\n"
                     else:
                         return "ERR invalid mode\n"
                 finally:
@@ -71,7 +70,7 @@ class TcpChessHandler(socketserver.StreamRequestHandler):
                     unlock()
             elif line.startswith("B:"):
                 gid = line.split(":",1)[1]
-                game = get_game(gid)
+                game = get_state(gid)
                 sboard = str(game.board)
                 print( sboard )
                 
@@ -81,13 +80,13 @@ class TcpChessHandler(socketserver.StreamRequestHandler):
                 return strboard
             elif line.startswith("T:"):
                 gid = line.split(":")[1]
-                game = get_game(gid)
+                game = get_state(gid)
                 ret = "ACK " +  game.settings_str()
                 return ret
 
             elif line.startswith("S:"):
                 gid = line.split(":")[1]
-                game = get_game(gid)
+                game = get_state(gid)
                 ret = "ACK " +  game.state_line()
                 return ret
             elif line.startswith("L:"):

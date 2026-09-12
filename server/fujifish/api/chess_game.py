@@ -16,6 +16,104 @@ import threading
 MAX_PLAYERS = 2
 MIN_PLAYERS = 1
 
+
+
+class TableMutex:
+    def __init__(self) -> None:
+        self._locks: Dict[str, threading.Lock] = {}
+        self._guard = threading.Lock()
+
+    def Lock(self, key: str) -> Callable[[], None]:
+        # Return an unlock() closure (to mirror Go style)
+
+        with self._guard:
+            lock = self._locks.get(key)
+            if lock is None:
+                lock = threading.Lock()
+                self._locks[key] = lock
+        lock.acquire()
+
+        unlocked = False
+
+        def unlock() -> None:
+            nonlocal unlocked # not part of inner function
+            if not unlocked:
+                lock.release()
+                unlocked = True
+
+        # return unlock() for unlocking.
+        return unlock
+
+
+STATE_MAP: Dict[ str, ChessGame ] = {}
+TABLES : List[GameTable]  = []
+table_mutex = TableMutex()
+
+def initialize_tables():
+
+    tables_json = os.getenv("GAME_SERVER_TABLES", "" )
+    print(tables_json)
+    raw_list = json.loads( tables_json )
+    for table in raw_list:
+        servername = table.get("servername")
+        instance_url_suffix = table.get("instance_url_suffix").lower()
+        bot_level = int(table.get("bot_level"))
+        register_lobby = table.get("register_lobby")
+        table_obj, chess_game = create_table( servername, instance_url_suffix, bot_level, register_lobby )
+        TABLES.append(table_obj)
+        STATE_MAP[ instance_url_suffix ] =chess_game
+        chess_game.update_lobby()
+
+
+def get_state( table:str ) -> Tuple[ Optional[ChessGame] ]:
+    tbl = table.lower()
+    #plyr = ""
+    #if len(player) > 0:
+    #    plyr = player.lower()
+
+    unlock_fcn = table_mutex.Lock( tbl )
+    state = None
+    tmp_state = STATE_MAP.get( tbl )
+    if tmp_state is not None:
+        state = copy.deepcopy( tmp_state )
+        #state.set_client_player_by_name( plyr )
+    unlock_fcn()
+    return state
+
+def get_game( table:str ) -> Tuple[ Optional[ChessGame], Callable[ [], None]]:
+    tbl = table.lower()
+    #plyr = ""
+    #if len(player) > 0:
+    #    plyr = player.lower()
+
+    unlock_fcn = table_mutex.Lock( tbl )
+    state = STATE_MAP.get( tbl )
+    #if tmp_state is not None:
+    #    state = copy.deepcopy( tmp_state )
+    #    #state.set_client_player_by_name( plyr )
+
+    return state, unlock_fcn
+
+
+def save_state( state: ChessGame ):
+    STATE_MAP[ state.table] = state
+
+
+def cleanup():
+    for table, state in STATE_MAP.items():
+        try:
+            unlock_fcn = table_mutex.Lock( table )
+            print("Try delete: " + state.servername )
+            state.delete_from_lobby()
+            unlock_fcn()
+        except Exception as e:
+            print(f"[cleanup] failed to delete lobby for table={getattr(gs, 'table', '?')}: {e}")
+
+
+
+
+
+
 @dataclass
 class GameTable:
     table: str    # description, 

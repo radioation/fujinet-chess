@@ -9,8 +9,8 @@ def client():
     import os
     os.environ[ "GAME_SERVER_TABLES" ] = '[ { "servername":"Iceland", "instance_url_suffix":"Iceland", "bot_level": -1, "register_lobby": false }, { "servername":"Philippines", "instance_url_suffix":"manila", "bot_level": -1, "register_lobby": false } , { "servername":"Hastings", "instance_url_suffix":"hastings", "bot_level": -1, "register_lobby": false } , { "servername":"bangkok", "instance_url_suffix":"bangkok", "bot_level": -1, "register_lobby": false } ]'
     
-    from fujifish.api.http_api import app, initialize_tables
-    from fujifish.api.chess_game import ChessGame
+    from fujifish.api.http_api import app
+    from fujifish.api.chess_game import ChessGame, initialize_tables
     initialize_tables()  # create game specified by 'GAME_SERVER_TABLES'
     with app.test_client() as test_client:
         yield test_client
