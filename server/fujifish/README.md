@@ -81,6 +81,20 @@ Trying 127.0.0.1...
 Connected to 127.0.0.1.
 Escape character is '^]'.
 HELO
+J:hastings:gorm:W
+ACK 12C64E08:W
+J:hastings:radyo:W
+ACK E371D7BE:B
+
+M:hastings:E371D7BE:e7e5
+ERR player 1 turn
+M:hastings:12C64E0B:e2e4
+ACK legal move
+B:hastings
+ACK rnbqkbnrpppppppp....................P...........PPPP.PPPRNBQKBNR
+S:hastings
+ACK TURN b:LAST e2e4:MVNO 1
+
 ```
 
 # OLD INTERFACE

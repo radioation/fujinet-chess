@@ -10,10 +10,10 @@ class TcpChessHandler(socketserver.StreamRequestHandler):
         print("connected")
         self.wfile.write(b"HELO\n")
         for line in self.rfile:
-            print("pre-strip: ", end="" )
+            #print("pre-strip: ", end="" )
             print(line)
             line = line.decode("utf-8").strip()
-            print("POST-strip: " + line)
+            #print("POST-strip: " + line)
             if not line:
                 continue
             response = self.dispatch(line)
@@ -28,15 +28,15 @@ class TcpChessHandler(socketserver.StreamRequestHandler):
                     return "ERR invalid\n"
                 gid = parts[1]
                 if len(gid) == 0:
-                    return "ERR invalid\n"
+                    return "ERR invalid gid\n"
                 game, unlock = get_game(gid)
                 try:
                     if game is not None: 
 
                         ( player_id, side ) = game.join_game(parts[2], parts[3])
-                        return f"ACK {player_id} : {side}\n"
+                        return f"ACK {player_id}:{side}\n"
                     else:
-                        return "ERR invalid mode\n"
+                        return "ERR gid not found\n"
                 finally:
                     unlock()
             elif line.startswith("M:"):
