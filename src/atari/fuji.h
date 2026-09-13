@@ -18,9 +18,9 @@
 #define AK_APP_ID 1               // Fujzee App ID
 #define AK_KEY_PREFS 0            // Preferences
 
+#include <fujinet-network.h>
 
-
-uint8_t doGet( char* q );
-uint8_t doPost( char* q );
+uint8_t doGet( char* path, char* buffer, int16_t buffer_len );
+uint8_t doPost( char* path, char* data, char* buffer, int16_t buffer_len );
 
 #endif // _CLIENT_H_

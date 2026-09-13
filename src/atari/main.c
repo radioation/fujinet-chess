@@ -664,24 +664,73 @@ static void handle_my_turn() {
 }
 
 
-char buffer[64];
+extern char server[64];
+extern char qtable[32];
+extern char playerid[10];
+char rx_buffer[256];
+char tx_buffer[32];
+char playername[16];
 
 int main(void)
 {
+  char *ptr;
+  int16_t size;
   uint16_t read = 0;
   clrscr();
   // get server 
   fuji_set_appkey_details(AK_LOBBY_CREATOR_ID, AK_LOBBY_APP_ID, DEFAULT);  
-  fuji_read_appkey( AK_LOBBY_KEY_SERVER,  & read, buffer );
-  buffer[read] = 0;
-  cprintf(buffer);
- 
-  fuji_read_appkey( AK_LOBBY_KEY_USERNAME,  & read, buffer );
-  buffer[read] = 0;
-  cprintf(buffer);
-  //read_appkey(AK_LOBBY_CREATOR_ID,  AK_LOBBY_APP_ID, AK_LOBBY_KEY_SERVER, buffer);
+  fuji_read_appkey( AK_LOBBY_KEY_SERVER,  & read, rx_buffer );
+  rx_buffer[read] = 0;
+  ptr = strchr( rx_buffer, '?' );
+  size = ptr - rx_buffer;
+  strncpy( server, rx_buffer, size );
+  strcpy( qtable, ptr );
+  fuji_read_appkey( AK_LOBBY_KEY_USERNAME,  & read, rx_buffer );
+  rx_buffer[read] = 0;
+  strcpy( playername, rx_buffer ); 
+  cprintf("server: %s\r\n",server);
+  cprintf("qtable: %s\r\n",qtable);
+  cprintf("name: %s\r\n",playername);
 
-  //read_appkey(AK_LOBBY_CREATOR_ID,  AK_LOBBY_APP_ID, AK_LOBBY_KEY_USERNAME, buffer); 
+
+  // get board
+  // "http://localhost:5364/status?table=hastings"
+  size = doGet( "/status", rx_buffer, sizeof(rx_buffer ) );
+  rx_buffer[size] = 0;
+  cprintf("status: %s\r\n",rx_buffer);
+
+  size = doGet( "/board", rx_buffer, sizeof(rx_buffer ) );
+  rx_buffer[size] = 0;
+  cprintf("board:\n %s\n",rx_buffer);
+  
+  
+  // join game curl -X POST "http://localhost:5364/joingame?table=bangkok" -d $'radyo\nW\n'
+  strcpy( tx_buffer, playername );
+  strcat( tx_buffer, "\x0aW\x0a" );
+
+  size = doPost( "/joingame", tx_buffer, rx_buffer, sizeof(rx_buffer)); 
+  rx_buffer[size] = 0;
+  cprintf("join:\r\n %s\r\n",rx_buffer);
+  strncpy( playerid, rx_buffer, 8 );
+  playerid[8] = 0;
+  if( rx_buffer[9] == 'W' ) {
+    cprintf("White\r\n");
+  } else {
+    cprintf("Black\r\n");
+  }
+  cgets( rx_buffer, sizeof(rx_buffer ) );
+  cprintf("tx: %s\r\n", rx_buffer );
+  sprintf( tx_buffer, "%s\x0a%s\x0a", playerid, rx_buffer );
+
+  size = doPost( "/move", tx_buffer, rx_buffer, sizeof(rx_buffer)); 
+  rx_buffer[size] = 0;
+  cprintf("move:\r\n %s\r\n",rx_buffer);
+
+
+
+  //read_appkey(AK_LOBBY_CREATOR_ID,  AK_LOBBY_APP_ID, AK_LOBBY_KEY_SERVER, rx_buffer);
+
+  //read_appkey(AK_LOBBY_CREATOR_ID,  AK_LOBBY_APP_ID, AK_LOBBY_KEY_USERNAME, rx_buffer); 
 
   for (;;) {}
 
