@@ -170,6 +170,7 @@ class ChessGame:
         self.moves = []
         self.lobby = None
         if register_lobby is True:
+            print(" GET LOBBY!")
             self.lobby = get_lobby()
         if bot_level < 1:
             print("NO SYNTH")
@@ -432,7 +433,7 @@ GAMES_LOCK = threading.Lock()
 
 
 
-def create_table( table: str, server_name: str, bot_level: int, register_lobby: bool ) -> (GameTable, GameState) :
+def create_table( server_name: str, table: str, bot_level: int, register_lobby: bool ) -> (GameTable, GameState) :
 
     chess_game = ChessGame( table, server_name, bot_level, register_lobby )
 

@@ -8,8 +8,9 @@
 #include <stdbool.h>
 
 #include <fujinet-network.h>
+#include <fujinet-fuji.h>
 
-
+#include "fuji.h"
 // Enum to represent piece types (using offsets for lookup into image)
 /*
    typedef enum {
@@ -663,10 +664,28 @@ static void handle_my_turn() {
 }
 
 
+char buffer[64];
 
 int main(void)
 {
+  uint16_t read = 0;
+  clrscr();
+  // get server 
+  fuji_set_appkey_details(AK_LOBBY_CREATOR_ID, AK_LOBBY_APP_ID, DEFAULT);  
+  fuji_read_appkey( AK_LOBBY_KEY_SERVER,  & read, buffer );
+  buffer[read] = 0;
+  cprintf(buffer);
+ 
+  fuji_read_appkey( AK_LOBBY_KEY_USERNAME,  & read, buffer );
+  buffer[read] = 0;
+  cprintf(buffer);
+  //read_appkey(AK_LOBBY_CREATOR_ID,  AK_LOBBY_APP_ID, AK_LOBBY_KEY_SERVER, buffer);
 
+  //read_appkey(AK_LOBBY_CREATOR_ID,  AK_LOBBY_APP_ID, AK_LOBBY_KEY_USERNAME, buffer); 
+
+  for (;;) {}
+
+/*
   //////////////////////////////////////////////////////////////
   // setup screen and palettes
   setup_charset();
@@ -705,7 +724,7 @@ int main(void)
       //           poll_other_player();
     }
   }
-
+*/
   return 0;
 }
 
