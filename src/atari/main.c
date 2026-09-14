@@ -11,6 +11,14 @@
 #include <fujinet-fuji.h>
 
 #include "fuji.h"
+
+extern char server[64];
+extern char qtable[32];
+extern char playerid[10];
+char rx_buffer[256];
+char tx_buffer[32];
+char playername[16];
+char uci_move[6]; // need 6 for promotion to 'q','r','b', or 'n'
 // Enum to represent piece types (using offsets for lookup into image)
 /*
    typedef enum {
@@ -36,6 +44,10 @@
 #define  BISHOP  4
 #define  KNIGHT  5
 #define  PAWN   6
+
+
+#define FILE_X 97   // ascii 'a'
+#define RANK_Y 49   // ascii '1'
 
 #define NO_PLAYER  0
 #define PLAYER_ONE  1
@@ -344,7 +356,7 @@ static void setup_charset() {
   //for( i=0; i < 64; ++i ) { 
   //  screen_memory[20+i] = i;
   //}
-  sprintf((char *)message_memory, "fujinet"); 
+  //sprintf((char *)message_memory, "fujinet"); 
 }
 
 static void setup_pm_graphics() {
@@ -390,67 +402,91 @@ static void setup_pm_graphics() {
 
 }
 
+void gr1text(char* buf) {
+    int i = 0;
+    while (buf[i] != '\0') {
+        unsigned char c = buf[i];
+        // lower to upper case 
+        if (c >= 'a' && c <= 'z') {
+            c -= 32;
+        }
+        // fix numbers
+        if (c >= 32 && c <= 95) {
+            c -= 32;
+        }
+
+        // others (ATASCII 0-31)
+        else if (c < 32) {
+            c += 64;
+        }
+
+        buf[i] = c;
+        i++;
+    }
+}
 
 
-//bool send_move( CURSOR* cursor, uint8_t type  ) {
+bool send_move( CURSOR* cursor, uint8_t type  ) {
+
+  // TODO: promote pawns if 
+  uci_move[0] = FILE_X + chess_cursor.sel_col;
+  uci_move[1] = RANK_Y + 7 - chess_cursor.sel_row;
+  uci_move[2] = FILE_X + chess_cursor.col;
+  uci_move[3] = RANK_Y + 7 - chess_cursor.row;
+  uci_move[4] = 0;
+
+  memset( rx_buffer, 0, sizeof(rx_buffer) ); 
+  sprintf((char *)message_memory, "move %s    ", move );
+ // sprintf((char *)message_memory, move); 
+  gr1text( (char*)message_memory ); // grrrrr
+  // VDP_drawText("SEND REQUEST", 0, 0 );
+
+  //NET_sendMessage(request);
+  //NET_SendString(request);
+
+  //VDP_drawText("WAITING ", 20, 0 );
+//  do { waitMs(100 );
+//  // SYS_doVBlankProcess();
 //
-//  // TODO: promote pawns...
-//  int8_t move[5];
-//  move[0] = FILE_X + cursor->sel_col;
-//  move[1] = RANK_Y + 7 - cursor->sel_row;
-//  move[2] = FILE_X + cursor->col;
-//  move[3] = RANK_Y + 7 - cursor->row;
-//  move[4] = 0;
-//
-//  memset( request,0, sizeof(request) ); 
-//  sprintf(request,"M:%s:%s:%s\n", game_id, player_id, move );
-//  // VDP_drawText("SEND REQUEST", 0, 0 );
-//
-//  //NET_sendMessage(request);
-//  NET_SendString(request);
-//
-//
-//  VDP_drawText("WAITING ", 20, 0 );
-//  SYS_doVBlankProcess();
-//  do { waitMs(100 ); } while(  Buffer_IsEmpty(&RxBuffer) );
+//  } while(  Buffer_IsEmpty(&RxBuffer) );
 //
 //  text_cursor_y = 2;
 //  int16_t count = read_line( response, sizeof(response) );
-//
-//  VDP_drawText(response, 0, 1 );
-//  SYS_doVBlankProcess();
-//  waitMs(100);
-//  /*
-//     M:e78c2852:b6dc3dda
-//     ERR:bad format
-//     M:e78c2852:b6dc3dda:d2d3
-//     ACK d7d5
-//
-//     M:e78c2852:b6dc3dda:d1d3
-//     ACK illegal move
-//     M:e78c2852:b6dc3dda:e2e4
-//     ACK e7e6
-//     */
-//
-//
-//  if( strcmp( response, "ACK legal move" ) == 0 ) {
-//    move_piece( cursor->sel_col, cursor->sel_row, cursor->col, cursor->row, 0 );
-//    return true;
-//  } else {
-//    char message[40];
-//    sprintf(message, "FAIL-%s-", response ); 
-//    VDP_drawText(message, 0, 2 );
-//    while(1) {
-//      SYS_doVBlankProcess();
-//      waitMs(100);
-//    }
-//
-//  }
-//
-//  return false;
-//
-//}
-//
+
+  //VDP_drawText(response, 0, 1 );
+  //SYS_doVBlankProcess();
+  //waitMs(100);
+  /*
+     M:e78c2852:b6dc3dda
+     ERR:bad format
+     M:e78c2852:b6dc3dda:d2d3
+     ACK d7d5
+
+     M:e78c2852:b6dc3dda:d1d3
+     ACK illegal move
+     M:e78c2852:b6dc3dda:e2e4
+     ACK e7e6
+     */
+
+
+ // if( strcmp( response, "ACK legal move" ) == 0 ) {
+ //   move_piece( chess_cursor.sel_col, chess_cursor.sel_row, chess_cursor.col, chess_cursor.row, 0 );
+ //   return true;
+ // } else {
+ //   char message[40];
+ //   sprintf(message, "FAIL-%s-", response ); 
+ //   VDP_drawText(message, 0, 2 );
+ //   while(1) {
+ //  //   SYS_doVBlankProcess();
+ //  //   waitMs(100);
+ //   }
+
+ // }
+
+  return false;
+
+}
+
 
 
 void read_status( ){
@@ -473,6 +509,7 @@ void read_status( ){
 
 
 void cursor_init( ) {
+  uint16_t pos = BOARD_START;
   chess_cursor.col = 4;  // board position
   chess_cursor.row = 4;
   //  chess_cursor.txt_x = chess_cursor.col * cursorStep + cursorColStart;
@@ -484,9 +521,12 @@ void cursor_init( ) {
   //  chess_cursor.sel_txt_x = -1;
   //  chess_cursor.sel_txt_y = -1;
 
-  //cursor->selected_spr = selected_sprite;
-  //SPR_setAnim( cursor->selected_spr, 1 );
-  // SPR_setVisibility( cursor->selected_spr, HIDDEN );
+  //chess_cursor.selected_spr = selected_sprite;
+  //SPR_setAnim( chess_cursor.selected_spr, 1 );
+  // SPR_setVisibility( chess_cursor.selected_spr, HIDDEN );
+    pos += (chess_cursor.row * 32 ) + chess_cursor.col * 2;
+    screen_memory[ pos ] = 28 + 64;
+    screen_memory[ pos+16 ] = 29 + 64;
 }
 
 bool cursor_move( uint8_t stick ) {
@@ -578,7 +618,7 @@ bool cursor_action( CHESS_PIECE brd[8][8], uint8_t player ) {
       //chess_cursor.sel_txt_x = chess_cursor.sel_col * cursorStep + cursorColStart;
       //chess_cursor.sel_txt_y = chess_cursor.sel_row * cursorStep + cursorRowStart;
       ////SPR_setVisibility( chess_cursor.selected_spr, VISIBLE );
-      return true;
+      return false; // just selection, don't need to send.
     }
   } else {
     // Sega has a C button, atari doesn't. deselect if we're on the piece we selected
@@ -627,7 +667,10 @@ static void handle_my_turn() {
       // need 
       bool trySend =  cursor_action( board, current_player );
       if( trySend ) {
-        // send possible move to server
+        if( send_move( &cursor, 1 ) ) {
+          current_player = current_player == PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE; 
+        }
+
       }
     }
     /* SEGA!
@@ -639,12 +682,12 @@ static void handle_my_turn() {
     }
     // if A, 
     if( stick & BUTTON_A ) {
-    bool trySend =  cursor_action( &cursor, board, currentPlayer );
+    bool trySend =  cursor_action( &cursor, board, current_player );
     inputWait = INPUT_WAIT_COUNT;
     if( trySend ) {
     // send possible move
     if( send_move( &cursor, 1 ) ) {
-    currentPlayer = currentPlayer == PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE; 
+    current_player = current_player == PLAYER_ONE ? PLAYER_TWO : PLAYER_ONE; 
     }
     }
     } else if( stick & BUTTON_C ) {
@@ -664,18 +707,13 @@ static void handle_my_turn() {
 }
 
 
-extern char server[64];
-extern char qtable[32];
-extern char playerid[10];
-char rx_buffer[256];
-char tx_buffer[32];
-char playername[16];
 
 int main(void)
 {
   char *ptr;
   int16_t size;
   uint16_t read = 0;
+  /*
   clrscr();
   // get server 
   fuji_set_appkey_details(AK_LOBBY_CREATOR_ID, AK_LOBBY_APP_ID, DEFAULT);  
@@ -724,7 +762,7 @@ int main(void)
 
   size = doPost( "/move", tx_buffer, rx_buffer, sizeof(rx_buffer)); 
   rx_buffer[size] = 0;
-  cprintf("move:\r\n %s\r\n",rx_buffer);
+  cprintf("move: %s\r\n",rx_buffer);
 
 
 
@@ -734,31 +772,45 @@ int main(void)
 
   for (;;) {}
 
-/*
+*/
   //////////////////////////////////////////////////////////////
-  // setup screen and palettes
+  // setup network
+  network_init();
+
+  fuji_set_appkey_details(AK_LOBBY_CREATOR_ID, AK_LOBBY_APP_ID, DEFAULT);  
+  fuji_read_appkey( AK_LOBBY_KEY_SERVER,  & read, rx_buffer );
+  rx_buffer[read] = 0;
+  ptr = strchr( rx_buffer, '?' );
+  size = ptr - rx_buffer;
+  strncpy( server, rx_buffer, size );
+  strcpy( qtable, ptr );
+  fuji_read_appkey( AK_LOBBY_KEY_USERNAME,  & read, rx_buffer );
+  rx_buffer[read] = 0;
+  strcpy( playername, rx_buffer ); 
+  sprintf((char *)message_memory, "%s %s", playername, qtable+7);
+  gr1text( (char*)message_memory ); // grrrrr
+
+
+  //////////////////////////////////////////////////////////////
+  // setup screen and palettes TODO: platform specific
   setup_charset();
 
-
   //////////////////////////////////////////////////////////////
-  // setup sprites
+  // setup sprites TODO: platform specific
   setup_pm_graphics();
-
   init_dlist();
-  //////////////////////////////////////////////////////////////
-  network_init();
-  //strcpy( devicespec, "N:TCP://10.25.50.61:6510/" );
-  
+
+
 
   // screen_print_at(0, 1, "PLAYER:");
 
   //    setup_network_game();
-  cursor_init();
 
 
   clear_board();
   setup_pieces();
   draw_pieces();
+  cursor_init();
 
   inputWait = INPUT_WAIT_COUNT;
   current_player = PLAYER_ONE;
@@ -773,7 +825,7 @@ int main(void)
       //           poll_other_player();
     }
   }
-*/
+
   return 0;
 }
 
